@@ -4,7 +4,7 @@ from qc.word_generator import WordGenerator
 
 
 class GenerateWordsTest(unittest.TestCase):
-    def test_generate_words(self):
+    def test_generate_words(self) -> None:
         gates = [['H', 'Z'], ['H', 'Z'], ['H', 'Z', 'Y']]
         k = [2, 1, 2]
         want = [['HH', 'HZ', 'ZH', 'ZZ'], ['H', 'Z'], ['HH', 'HZ', 'HY', 'ZH', 'YH', 'ZY', 'YZ', 'ZZ', 'YY']]

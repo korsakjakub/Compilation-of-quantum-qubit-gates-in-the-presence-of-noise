@@ -1,7 +1,7 @@
 # Generate all possible words of given length
 class WordGenerator:
 
-    def __init__(self, input_set, length):
+    def __init__(self, input_set: list, length: int):
         self.output: list = []
         self.input_set = input_set
         self.length = length
@@ -10,7 +10,7 @@ class WordGenerator:
         self.generate_words_rec("", self.length)
         return self.output
 
-    def generate_words_rec(self, word, length) -> None:
+    def generate_words_rec(self, word: str, length: int) -> None:
         if length == 0:
             self.output.append(word)
             return
