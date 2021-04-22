@@ -1,1 +1,5 @@
-print("hello")
+def main() -> None:
+    pass
+
+
+main()
