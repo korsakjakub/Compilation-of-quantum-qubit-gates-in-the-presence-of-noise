@@ -1,18 +1,46 @@
+from __future__ import annotations
+import numpy as np
 import qutip.qip.operations.gates as q
 
 
-class Gate:
-
+class Gate(object):
     gates = {
-        'H': q.hadamard_transform,
-        'X': q.sigmax,
-        'Y': q.sigmay,
-        'Z': q.sigmaz,
-        'I': q.qeye
+        'H': q.hadamard_transform().full(),
+        'X': q.sigmax().full(),
+        'Y': q.sigmay().full(),
+        'Z': q.sigmaz().full(),
+        'T': q.phasegate(np.pi / 4).full(),
+        'R': q.phasegate(- np.pi / 4).full()
     }
 
-    def __init__(self, key: str) -> None:
-        self.gate = self.gates[key]
+    def __init__(self) -> None:
+        self._gate = [[], []]
 
-    def get(self):
-        return self.gate
+    @property
+    def gate(self) -> np.array:
+        return self._gate
+
+    # given a word from the set of gates, return their product
+    def set_by_word(self, g: str) -> Gate:
+        if len(g) > 1:
+            self._gate = self.__combine_gates(g)
+        elif g[0] in self.gates:
+            self._gate = self.gates[g[0]]
+        return self
+
+    # su(2) matrix is of the form
+    # a, -b*
+    # b, a*,
+    # where a, and b are complex
+    def set_by_params(self, a: complex, b: complex) -> Gate:
+        if np.isclose(a.real**2 + a.imag**2 + b.real**2 + b.imag**2, 1.0):
+            self._gate = np.array(((a, - np.conj(b)), (b, np.conj(a))))
+        else:
+            print("\nNormalize the parameters!\n")
+        return self
+
+    def __combine_gates(self, word: str) -> np.array:
+        out = ((1, 0), (0, 1))
+        for s in word:
+            out = np.matmul(out, self.gates[s])
+        return out
