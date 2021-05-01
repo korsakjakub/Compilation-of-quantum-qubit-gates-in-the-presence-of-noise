@@ -13,6 +13,12 @@ class GenerateWordsTest(unittest.TestCase):
             got = generator.generate_words()
             self.assertEqual(set(want[i]), set(got))
 
+    def test_words(self) -> None:
+        slowa = ['0', '1']
+        k = 4
+        g = WordGenerator(slowa, k).generate_words()
+        print(len(g), g)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -16,5 +16,6 @@ class DensityMatrixTest(unittest.TestCase):
     def test_get_rotation_matrix(self):
         pass
 
+
 if __name__ == '__main__':
     unittest.main()
