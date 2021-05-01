@@ -4,7 +4,7 @@ import numpy as np
 
 class DensityMatrix:
 
-    def __init__(self, matrix: np.matrix) -> None:
+    def __init__(self, matrix: np.array) -> None:
         self.state = matrix
 
     @classmethod

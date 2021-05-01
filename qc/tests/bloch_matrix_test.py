@@ -17,7 +17,7 @@ class BlochMatrixTest(unittest.TestCase):
                              (-np.sin(angle[2]), 0, np.cos(angle[2])))))
         for i in range(2):
             got = get_rotation_matrix(axis[i], angle[i])
-            self.assertEqual(got.all(), wanted[i].all())
+            np.testing.assert_array_almost_equal(got, wanted[i])
 
 
 if __name__ == '__main__':
