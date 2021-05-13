@@ -1,0 +1,3 @@
+
+- sparametryzować testy żeby można było dawać dużo losowych inputów
+- mapa takiej parametryzacji na tę macierz w SO3
