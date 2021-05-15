@@ -4,4 +4,4 @@ scipy~=1.6.2
 matplotlib~=3.4.1
 setuptools~=56.0.0
 numba
-pycos
+picos
