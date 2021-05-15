@@ -18,12 +18,12 @@ def get_rotation_matrix(axis: Axis, angle):
     x = angle if axis == Axis.X else 0
     y = angle if axis == Axis.Y else 0
     z = angle if axis == Axis.Z else 0
-    return R.from_rotvec([x, y, z]).as_matrix()
+    return R.from_rotvec((x, y, z)).as_matrix()
 
 
 class BlochMatrix(object):
     def __init__(self):
-        self._rot = [[], []]
+        self._rot = np.empty(shape=(2, 2))
 
     @property
     def rot(self) -> np.array:
@@ -38,7 +38,7 @@ class BlochMatrix(object):
         c = g.gate[1, 0].real
         d = g.gate[1, 0].imag
 
-        self._rot = np.array((a**2 - b**2 - c**2 + d**2, 2 * (a * b - c * d), 2 * (b * d + a * c)),
-                             (-2 * (a * b + c * d), a**2 - b**2 + c**2 - d**2, 2 * (a * d - b * c)),
-                             (2 * (b * d - a * c), 2 * ( b * c - a * d), a**2 + b**2 - c**2 - d**2))
+        self._rot = np.array((a ** 2 - b ** 2 - c ** 2 + d ** 2, 2 * (a * b - c * d), 2 * (b * d + a * c)),
+                             (-2 * (a * b + c * d), a ** 2 - b ** 2 + c ** 2 - d ** 2, 2 * (a * d - b * c)),
+                             (2 * (b * d - a * c), 2 * (b * c - a * d), a ** 2 + b ** 2 - c ** 2 - d ** 2))
         return self
