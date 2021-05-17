@@ -5,12 +5,12 @@ import qutip.qip.operations.gates as q
 
 class Gate(object):
     gates = {
-        'H': q.hadamard_transform().full(),
-        'X': q.sigmax().full(),
-        'Y': q.sigmay().full(),
-        'Z': q.sigmaz().full(),
-        'T': q.phasegate(np.pi / 4).full(),
-        'R': q.phasegate(- np.pi / 4).full()
+        'H': 1j * q.hadamard_transform().full(),
+        'X': 1j * q.sigmax().full(),
+        'Y': 1j * q.sigmay().full(),
+        'Z': 1j * q.sigmaz().full(),
+        'T': (np.cos(np.pi/8) - np.sin(np.pi/8) * 1j) * q.phasegate(np.pi / 4).full(),
+        'R': (np.cos(np.pi/8) + np.sin(np.pi/8) * 1j) * q.phasegate(- np.pi / 4).full()
     }
 
     def __init__(self) -> None:
@@ -19,6 +19,10 @@ class Gate(object):
     @property
     def gate(self) -> np.array:
         return self._gate
+
+    def get_universal(self, name: str):
+        self._gate = self.gates[name]
+        return self
 
     # given a word from the set of gates, return their product
     def set_by_word(self, g: str) -> Gate:

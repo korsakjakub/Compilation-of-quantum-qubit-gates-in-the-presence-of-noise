@@ -14,10 +14,21 @@ class GenerateWordsTest(unittest.TestCase):
             self.assertEqual(set(want[i]), set(got))
 
     def test_words(self) -> None:
-        slowa = ['0', '1']
+        words = ['0', '1']
+        want = ['0000', '0001', '0010', '0011', '0100', '0101', '0110', '0111', '1000', '1001', '1010', '1011', '1100',
+                '1101', '1110', '1111']
         k = 4
-        g = WordGenerator(slowa, k).generate_words()
-        print(len(g), g)
+        g = WordGenerator(words, k).generate_words()
+        self.assertEqual(set(want), set(g))
+
+    def test_generate_words_shorter_than(self) -> None:
+        gates = ['a', 'n']
+        k = 2
+        want = ['a', 'n', 'aa', 'nn', 'an', 'na']
+
+        generator = WordGenerator(gates, k)
+        got = generator.generate_words_shorter_than()
+        self.assertEqual(set(want), set(got))
 
 
 if __name__ == '__main__':
