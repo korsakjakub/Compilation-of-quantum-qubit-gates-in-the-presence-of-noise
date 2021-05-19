@@ -5,3 +5,5 @@ matplotlib~=3.4.1
 setuptools~=56.0.0
 numba
 picos
+ipykernel
+mosek
