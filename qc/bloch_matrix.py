@@ -21,12 +21,25 @@ def get_rotation_matrix(axis: Axis, angle):
 
 
 class BlochMatrix(object):
+    gates = {
+        'H': np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]),
+        'X': np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),
+        'Y': np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),
+        'Z': np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),
+        'T': np.array([[np.cos(np.pi/4), -np.sin(np.pi/4), 0], [np.sin(np.pi/4), np.cos(np.pi/4), 0], [0, 0, 1]]),
+        'R': np.array(
+            [[np.cos(np.pi / 4), np.sin(np.pi / 4), 0], [- np.sin(np.pi / 4), np.cos(np.pi / 4), 0], [0, 0, 1]]),
+    }
+
     def __init__(self):
         self._rot = np.empty(shape=(3, 3))
 
     @property
     def rot(self) -> np.array:
         return self._rot
+
+    def get_universal(self, name: str):
+        return self.gates[name]
 
     # return rotation matrix from so(3) given a gate from su(2) with parametrisation
     # a + ib, -c + id
@@ -45,8 +58,8 @@ class BlochMatrix(object):
     def combine_with_noise(self, word: list[str], visibility: float):
         self._rot = np.identity(3)
         for g in word:
-            gate = Gate().get_universal(g)
-            self._rot = np.matmul(self._rot, visibility * self.set_by_gate(gate).rot)
+            gate = self.get_universal(g)
+            self._rot = np.matmul(self._rot, visibility * gate)
         return self
 
 
