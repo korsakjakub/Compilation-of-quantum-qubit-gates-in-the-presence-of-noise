@@ -24,4 +24,11 @@ class WordGenerator:
     def generate_words_shorter_than(self) -> list:
         for i in range(0, self.length):
             self.__generate_words_rec("", i + 1)
+            self._remove_unnecessary(i + 1)
         return self.output
+
+    def _remove_unnecessary(self, length: int = 0):
+        if length == 0:
+            length = self.length
+        for letter in self.input_set:
+            self.output.remove(letter * length)
