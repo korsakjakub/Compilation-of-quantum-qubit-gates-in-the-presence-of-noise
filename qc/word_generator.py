@@ -1,6 +1,4 @@
 # Generate all possible words of given length
-import numpy as np
-from numpy import ndarray
 
 
 class WordGenerator:
@@ -27,7 +25,7 @@ class WordGenerator:
             self._remove_unnecessary(i + 1)
         return self.output
 
-    def _remove_unnecessary(self, length: int = 0):
+    def _remove_unnecessary(self, length: int = 0) -> None:
         if length == 0:
             length = self.length
         for letter in self.input_set:
