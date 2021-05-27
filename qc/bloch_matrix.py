@@ -20,6 +20,13 @@ def get_rotation_matrix(axis: Axis, angle):
     return R.from_rotvec((x, y, z)).as_matrix()
 
 
+def get_bloch_vectors(matrices, initial=np.array((0.0, 0.0, 1.0))) -> np.ndarray:
+    vectors = np.zeros(shape=(len(matrices), 3))
+    for i in range(len(matrices)):
+        vectors[i] = np.dot(matrices[i], initial)
+    return vectors
+
+
 class BlochMatrix(object):
     gates = {
         'H': np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]),
@@ -31,8 +38,9 @@ class BlochMatrix(object):
             [[np.cos(np.pi / 4), np.sin(np.pi / 4), 0], [- np.sin(np.pi / 4), np.cos(np.pi / 4), 0], [0, 0, 1]]),
     }
 
-    def __init__(self):
+    def __init__(self, visibility: float = 1.0):
         self._rot = np.empty(shape=(3, 3))
+        self.visibility = visibility
 
     @property
     def rot(self) -> np.array:
@@ -62,18 +70,10 @@ class BlochMatrix(object):
             self._rot = np.matmul(self._rot, visibility * gate)
         return self
 
-
-# returns a list of 3x3 orthogonal matrices from a list of words
-def get_bloch_matrices(words, visibility: float = 1.0):
-    matrices = np.zeros(shape=(len(words), 3, 3))
-    for i in range(len(words)):
-        g = BlochMatrix().combine_with_noise(words[i], visibility).rot
-        matrices[i] = g
-    return matrices
-
-
-def get_bloch_vectors(matrices, initial=np.array((0.0, 0.0, 1.0))):
-    vectors = np.zeros(shape=(len(matrices), 3))
-    for i in range(len(matrices)):
-        vectors[i] = np.dot(matrices[i], initial)
-    return vectors
+    # returns a list of 3x3 orthogonal matrices from a list of words
+    def get_bloch_matrices(self, words) -> np.ndarray:
+        matrices = np.zeros(shape=(len(words), 3, 3))
+        for i in range(len(words)):
+            g = self.combine_with_noise(words[i], self.visibility).rot
+            matrices[i] = g
+        return matrices
