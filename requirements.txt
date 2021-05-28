@@ -3,7 +3,5 @@ qutip~=4.6.0
 scipy~=1.6.2
 matplotlib~=3.4.1
 setuptools~=56.0.0
-numba
-picos
-ipykernel
-mosek
+picos~=2.2.9
+tqdm~=4.61.0
