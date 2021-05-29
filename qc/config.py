@@ -1,4 +1,5 @@
 class Config:
-    TXT = "out.txt"
-    PNG = "out.png"
-    DIR = "output/"
+    DIR = "files/"
+    WORDS_DIR = DIR + "words/"
+    OUTPUTS_DIR = DIR + "outputs/"
+    FIGURES_DIR = DIR + "figures/"
