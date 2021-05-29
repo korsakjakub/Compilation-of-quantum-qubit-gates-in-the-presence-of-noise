@@ -17,8 +17,10 @@ class Program:
         if max_length > min_length >= 3:
             self.min_length = min_length
             self.max_length = max_length
+        else:
+            print("max length should be bigger than min length.")
 
-    def perform_lp(self):
+    def perform_lp(self, v):
         rn0 = np.random.default_rng().normal(size=3)
         n0 = rn0 / np.linalg.norm(rn0)
 
@@ -26,11 +28,10 @@ class Program:
         output_length = []
 
         for length in tqdm(range(self.min_length, self.max_length)):
-            sm = StatesManager(bloch=BlochMatrix(), wg=WordGenerator(['H', 'T', 'R'], length))
-            v = sm.get_states()
 
             problem = Problem()
-            n = len(v)
+            index = length - self.min_length
+            n = len(v[index])
             p = {}
 
             # dodaję zmienne
@@ -43,9 +44,9 @@ class Program:
             # p sumują się do 1
             problem.add_constraint(1 == pc.sum([p[i] for i in range(n)]))
             # wiąz na wektory
-            problem.add_constraint(t * n0[0] == pc.sum([p[j] * v[j][0] for j in range(n)]))
-            problem.add_constraint(t * n0[1] == pc.sum([p[j] * v[j][1] for j in range(n)]))
-            problem.add_constraint(t * n0[2] == pc.sum([p[j] * v[j][2] for j in range(n)]))
+            problem.add_constraint(t * n0[0] == pc.sum([p[j] * v[index][j][0] for j in range(n)]))
+            problem.add_constraint(t * n0[1] == pc.sum([p[j] * v[index][j][1] for j in range(n)]))
+            problem.add_constraint(t * n0[2] == pc.sum([p[j] * v[index][j][2] for j in range(n)]))
 
             problem.set_objective("max", t)
             problem.solve(solver='mosek')
@@ -53,22 +54,27 @@ class Program:
             output_length.append(length)
         return [output_length, output_t, n0]
 
-    def threaded_lp(self, threads: int = 2):
+    def threaded_lp(self, gates: list, bloch: BlochMatrix, threads: int = 2):
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            results = [executor.submit(self.perform_lp) for _ in range(threads)]
+            v = []
+            for length in tqdm(range(self.min_length, self.max_length)):
+                wg = WordGenerator(gates, length)
+                sm = StatesManager(bloch=bloch, wg=wg)
+                v.append(sm.get_states())
+            results = [executor.submit(self.perform_lp, v) for _ in range(threads)]
 
             for f in concurrent.futures.as_completed(results):
                 results.append(f.result())
-
         return results[threads:]
 
 
 if __name__ == "__main__":
     start = timer()
-    program = Program(3, 6)
+    gates = ['H', 'T', 'R']
+    program = Program(min_length=3, max_length=7)
     writer = DataManager()
-    res = program.threaded_lp(2)
+    res = program.threaded_lp(gates=gates, bloch=BlochMatrix(visibility=0.9), threads=12)
     writer.write_results(res)
     writer.file_to_png()
     end = timer()
