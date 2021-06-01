@@ -1,10 +1,12 @@
 # Matrix transforming the Bloch vector
 from __future__ import annotations
+
 from enum import Enum
+
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+
 import qc.gates
-from qc.gates import Gate
 
 
 class Axis(Enum):
@@ -24,7 +26,7 @@ def get_bloch_vectors(matrices, initial=np.array((0.0, 0.0, 1.0))) -> np.ndarray
     vectors = np.zeros(shape=(len(matrices), 3))
     for i in range(len(matrices)):
         vectors[i] = np.dot(matrices[i], initial)
-    return vectors
+    return np.unique(vectors, axis=0)
 
 
 class BlochMatrix(object):
@@ -33,7 +35,8 @@ class BlochMatrix(object):
         'X': np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),
         'Y': np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),
         'Z': np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),
-        'T': np.array([[np.cos(np.pi/4), -np.sin(np.pi/4), 0], [np.sin(np.pi/4), np.cos(np.pi/4), 0], [0, 0, 1]]),
+        'T': np.array(
+            [[np.cos(np.pi / 4), -np.sin(np.pi / 4), 0], [np.sin(np.pi / 4), np.cos(np.pi / 4), 0], [0, 0, 1]]),
         'R': np.array(
             [[np.cos(np.pi / 4), np.sin(np.pi / 4), 0], [- np.sin(np.pi / 4), np.cos(np.pi / 4), 0], [0, 0, 1]]),
     }
