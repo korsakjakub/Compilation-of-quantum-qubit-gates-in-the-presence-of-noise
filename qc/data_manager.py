@@ -59,10 +59,12 @@ class DataManager:
 
 class StatesManager:
 
-    def __init__(self, bloch: BlochMatrix, wg: WordGenerator):
+    def __init__(self, bloch: BlochMatrix, wg: WordGenerator, target: np.ndarray = np.array([0, 0, 1])):
         self.bloch = bloch
         self.wg = wg
-        self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) + "".join(wg.input_set) + ".txt"
+        self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) \
+                    + "".join(wg.input_set) + ".txt "
+        self.target = target
 
     def write_states(self) -> np.ndarray:
         output_file = open(self.path, "a")
@@ -72,7 +74,8 @@ class StatesManager:
         for vec in vectors:
             output_file.write(str(vec[0]) + "," + str(vec[1]) + "," + str(vec[2]) + "\n")
         output_file.close()
-        return vectors
+        vectors = self.remove_far_points(vectors)
+        return np.array(vectors)
 
     def get_states(self) -> np.ndarray:
         if os.path.isfile(self.path):
@@ -81,9 +84,17 @@ class StatesManager:
                 csv_reader = csv.reader(csv_file, delimiter=',')
                 for row in csv_reader:
                     vectors.append(np.array([float(row[0]), float(row[1]), float(row[2])]))
+            vectors = self.remove_far_points(vectors)
             return np.array(vectors)
         else:
             return self.write_states()
+
+    def remove_far_points(self, vectors, threshold: float = np.sqrt(2)):
+        out = []
+        for vector in vectors:
+            if np.linalg.norm(vector - self.target) < threshold:
+                out.append(vector)
+        return out
 
 
 if __name__ == "__main__":
