@@ -20,10 +20,7 @@ class Program:
         else:
             print("max length should be bigger than min length.")
 
-    def perform_lp(self, v):
-        rn0 = np.random.default_rng().normal(size=3)
-        n0 = rn0 / np.linalg.norm(rn0)
-
+    def perform_lp(self, v, n0):
         output_t = []
         output_length = []
 
@@ -59,10 +56,12 @@ class Program:
         with concurrent.futures.ProcessPoolExecutor() as executor:
             v = []
             for length in tqdm(range(self.min_length, self.max_length)):
+                rn0 = np.random.default_rng().normal(size=3)
+                n0 = rn0 / np.linalg.norm(rn0)
                 wg = WordGenerator(gates, length)
-                sm = StatesManager(bloch=bloch, wg=wg)
+                sm = StatesManager(bloch=bloch, wg=wg, target=n0)
                 v.append(sm.get_states())
-            results = [executor.submit(self.perform_lp, v) for _ in range(threads)]
+            results = [executor.submit(self.perform_lp, v, n0) for _ in range(threads)]
 
             for f in concurrent.futures.as_completed(results):
                 results.append(f.result())
@@ -71,10 +70,10 @@ class Program:
 
 if __name__ == "__main__":
     start = timer()
-    gates = ['H', 'T', 'R']
-    program = Program(min_length=3, max_length=7)
+    gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
+    program = Program(min_length=8, max_length=10)
     writer = DataManager()
-    res = program.threaded_lp(gates=gates, bloch=BlochMatrix(visibility=0.9), threads=12)
+    res = program.threaded_lp(gates=gates, bloch=BlochMatrix(visibility=0.95), threads=15)
     writer.write_results(res)
     writer.file_to_png()
     end = timer()
