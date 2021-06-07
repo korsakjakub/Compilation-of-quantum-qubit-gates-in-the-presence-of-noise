@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import csv
 import os.path
 
@@ -57,14 +59,26 @@ class DataManager:
         self.plot_output(ll, t)
 
 
-class StatesManager:
+def remove_far_points(vectors, target, out_length: int = 500):
+    return sorted(vectors, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
 
-    def __init__(self, bloch: BlochMatrix, wg: WordGenerator, target: np.ndarray = np.array([0, 0, 1])):
+
+class StatesManager(object):
+
+    def __init__(self, bloch: BlochMatrix, wg: WordGenerator):
         self.bloch = bloch
         self.wg = wg
         self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) \
                     + "".join(wg.input_set) + ".txt "
-        self.target = target
+        self._states: list = []
+
+    @property
+    def states(self) -> list:
+        return self._states
+
+    @states.setter
+    def states(self, value):
+        self._states = value
 
     def write_states(self) -> np.ndarray:
         output_file = open(self.path, "a")
@@ -74,27 +88,19 @@ class StatesManager:
         for vec in vectors:
             output_file.write(str(vec[0]) + "," + str(vec[1]) + "," + str(vec[2]) + "\n")
         output_file.close()
-        vectors = self.remove_far_points(vectors)
         return np.array(vectors)
 
-    def get_states(self) -> np.ndarray:
+    def get_states(self) -> StatesManager:
         if os.path.isfile(self.path):
             vectors = []
             with open(self.path) as csv_file:
                 csv_reader = csv.reader(csv_file, delimiter=',')
                 for row in csv_reader:
                     vectors.append(np.array([float(row[0]), float(row[1]), float(row[2])]))
-            vectors = self.remove_far_points(vectors)
-            return np.array(vectors)
+            self.states = np.array(vectors)
         else:
-            return self.write_states()
-
-    def remove_far_points(self, vectors, threshold: float = np.sqrt(2)):
-        out = []
-        for vector in vectors:
-            if np.linalg.norm(vector - self.target) < threshold:
-                out.append(vector)
-        return out
+            self.states = self.write_states()
+        return self
 
 
 if __name__ == "__main__":
