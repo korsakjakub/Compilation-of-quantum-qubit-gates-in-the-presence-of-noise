@@ -20,6 +20,43 @@ class Program:
         else:
             print("max length should be bigger than min length.")
 
+    def perform_sdp(self, v, n0):
+        output_a = []
+        output_length = []
+
+        for length in tqdm(range(self.min_length, self.max_length)):
+
+            problem = Problem()
+            index = length - self.min_length
+            p = {}
+            # take only a specified number of input vectors
+            vec = remove_far_points(v[index].states, target=n0, out_length=500)
+            n = len(vec)
+
+            a = picos.RealVariable('a')  # alpha
+            rho = picos.ComplexVariable('rho', (2, 2))
+
+            identity = picos.Constant('I', value=[[1, 0], [0, 1]], shape=(2, 2))
+            for i in range(n):
+                p[i] = picos.RealVariable('p[{0}]'.format(i))
+
+            # każde p >= 0
+            problem.add_list_of_constraints([p[i] >= 0 for i in range(n)])
+            # p sumują się do 1
+            problem.add_constraint(1 == pc.sum([p[i] for i in range(n)]))
+            # wiąz na wektory
+            problem.add_constraint(a * n0[0] == pc.sum([p[j] * vec[j][0] for j in range(n)]))
+            problem.add_constraint(a * n0[1] == pc.sum([p[j] * vec[j][1] for j in range(n)]))
+            problem.add_constraint(a * n0[2] == pc.sum([p[j] * vec[j][2] for j in range(n)]))
+            problem.add_constraint(1 == picos.trace(a * rho + (1 - a) * identity))
+            problem.add_constraint(a * rho >> 0)
+
+            problem.set_objective("max", a)
+            problem.solve(solver='mosek')
+            output_a.append(float(a))
+            output_length.append(length)
+        return [output_length, output_a, n0]
+
     def perform_lp(self, v, n0):
         output_t = []
         output_length = []
@@ -53,7 +90,7 @@ class Program:
             output_length.append(length)
         return [output_length, output_t, n0]
 
-    def threaded_lp(self, gates: list, bloch: BlochMatrix, threads: int = 2):
+    def threaded_program(self, gates: list, bloch: BlochMatrix, program: str, threads: int = 2):
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             v = []
@@ -69,7 +106,12 @@ class Program:
                 sm = StatesManager(bloch=bloch, wg=wg)
                 v.append(sm.get_states())
 
-            results = [executor.submit(self.perform_lp, v, n0[i]) for i in range(threads)]
+            if program == "lp":
+                results = [executor.submit(self.perform_lp, v, n0[i]) for i in range(threads)]
+            elif program == "sdp":
+                results = [executor.submit(self.perform_sdp, v, n0[i]) for i in range(threads)]
+            else:
+                return None
 
             for f in concurrent.futures.as_completed(results):
                 results.append(f.result())
@@ -78,12 +120,12 @@ class Program:
 
 if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
-    for _ in range(5):
-        start = timer()
-        program = Program(min_length=2, max_length=9)
-        writer = DataManager()
-        res = program.threaded_lp(gates=gates, bloch=BlochMatrix(visibility=0.95), threads=15)
-        writer.write_results(res)
-        writer.file_to_png()
-        end = timer()
-        print(f'czas: {end - start} s')
+    writer = DataManager()
+    # for _ in range(5):
+    start = timer()
+    program = Program(min_length=2, max_length=8)
+    res = program.threaded_program(gates=gates, bloch=BlochMatrix(visibility=0.95), program="sdp", threads=1)
+    writer.write_results(res)
+    end = timer()
+    print(f'czas: {end - start} s')
+    writer.file_to_png()
