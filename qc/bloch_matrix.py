@@ -39,11 +39,14 @@ class BlochMatrix(object):
             [[np.cos(np.pi / 4), -np.sin(np.pi / 4), 0], [np.sin(np.pi / 4), np.cos(np.pi / 4), 0], [0, 0, 1]]),
         'R': np.array(
             [[np.cos(np.pi / 4), np.sin(np.pi / 4), 0], [- np.sin(np.pi / 4), np.cos(np.pi / 4), 0], [0, 0, 1]]),
+        'I': np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+        )
     }
 
-    def __init__(self, visibility: float = 1.0):
+    def __init__(self, vis: float = 1.0):
         self._rot = np.empty(shape=(3, 3))
-        self.visibility = visibility
+        self.visibility = vis
 
     @property
     def rot(self) -> np.array:
@@ -66,17 +69,17 @@ class BlochMatrix(object):
                               (2 * (b * d - a * c), 2 * (b * c - a * d), a ** 2 + b ** 2 - c ** 2 - d ** 2)))
         return self
 
-    def combine_with_noise(self, word: list[str], visibility: float):
+    def combine_with_noise(self, word: list[str]):
         self._rot = np.identity(3)
         for g in word:
             gate = self.get_universal(g)
-            self._rot = np.matmul(self._rot, visibility * gate)
+            self._rot = np.matmul(self._rot, self.visibility * gate)
         return self
 
     # returns a list of 3x3 orthogonal matrices from a list of words
     def get_bloch_matrices(self, words) -> np.ndarray:
         matrices = np.zeros(shape=(len(words), 3, 3))
         for i in range(len(words)):
-            g = self.combine_with_noise(words[i], self.visibility).rot
+            g = self.combine_with_noise(words[i]).rot
             matrices[i] = g
         return matrices
