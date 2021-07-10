@@ -99,6 +99,24 @@ class StatesManager(object):
                 output_file.write(str(m[0][0]) + "," + str(m[0][1]) + "," + str(m[1][0]) + "," + str(m[1][1]) + "\n")
             output_file.close()
             return np.array(mat)
+        elif type == "b":
+            mat = self.bloch.get_bloch_matrices(words)
+            for m in mat:
+                output_file.write(str(m[0][0]) + "," + str(m[0][1]) + "," + str(m[0][2]) + "," +
+                                  str(m[1][0]) + "," + str(m[1][1]) + "," + str(m[1][2]) + "," +
+                                  str(m[2][0]) + "," + str(m[2][1]) + "," + str(m[2][2]) + "\n")
+            output_file.close()
+            return np.array(mat)
+        elif type == "s":
+            rho0 = np.array([[1, 0], [0, 0]])
+            mat = self.gate.get_gates(words)
+            states = [np.matmul(mat[i],
+                                np.matmul(rho0,
+                                          np.transpose(np.conjugate(mat[i])))) for i in range(len(mat) - 1)]
+            for s in states:
+                output_file.write(str(s[0][0]) + "," + str(s[0][1]) + "," + str(s[1][0]) + "," + str(s[1][1]) + "\n")
+            output_file.close()
+            return np.array(states)
 
     def get_vectors(self) -> StatesManager:
         if os.path.isfile(self.path):
@@ -112,6 +130,18 @@ class StatesManager(object):
             self._states = self._write_states("v")
         return self
 
+    def get_states(self) -> StatesManager:
+        if os.path.isfile(self.path):
+            matrices = []
+            with open(self.path) as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                for row in csv_reader:
+                    matrices.append(np.array([[float(row[0]), float(row[1])], [float(row[2]), float(row[3])]]))
+                self._states = np.array(matrices)
+        else:
+            self._states = self._write_states("s")
+        return self
+
     def get_matrices(self) -> StatesManager:
         if os.path.isfile(self.path):
             matrices = []
@@ -122,6 +152,20 @@ class StatesManager(object):
                 self._states = np.array(matrices)
         else:
             self._states = self._write_states("m")
+        return self
+
+    def get_bloch_matrices(self) -> StatesManager:
+        if os.path.isfile(self.path):
+            matrices = []
+            with open(self.path) as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                for row in csv_reader:
+                    matrices.append(np.array([[float(row[0]), float(row[1]), float(row[2])],
+                                              [float(row[3]), float(row[4]), float(row[5])],
+                                              [float(row[6]), float(row[7]), float(row[8])]]))
+                self._states = np.array(matrices)
+        else:
+            self._states = self._write_states("b")
         return self
 
 

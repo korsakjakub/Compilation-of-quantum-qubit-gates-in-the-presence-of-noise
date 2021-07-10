@@ -50,7 +50,7 @@ class Program:
             problem.add_constraint(rho >> 0)
             problem.add_constraint(rho + (1 - a)*identity / 2 == picos.sum([p[i] * vec[i] for i in range(n)]))
             problem.set_objective("max", a)
-            problem.solve(solver='mosek')
+            problem.solve(solver='cvxopt')
             output_a.append(float(a))
             output_length.append(length)
         return [output_length, output_a]
@@ -83,7 +83,7 @@ class Program:
             problem.add_constraint(t * n0[2] == pc.sum([p[j] * vec[j][2] for j in range(n)]))
 
             problem.set_objective("max", t)
-            problem.solve(solver='mosek')
+            problem.solve(solver='cvxopt')
             output_t.append(float(t))
             output_length.append(length)
         return [output_length, output_t, n0]
@@ -91,7 +91,7 @@ class Program:
     def perform_lp_channels(self, v, n0):
         output_t = []
         output_length = []
-        target = n0.data
+        target = n0
 
         for length in tqdm(range(self.min_length, self.max_length)):
 
@@ -113,13 +113,18 @@ class Program:
             # p sumują się do 1
             problem.add_constraint(1 == pc.sum([p[i] for i in range(n)]))
             # wiąz na wektory
-            problem.add_constraint(t * target[0][0] == pc.sum([p[j] * vec[j][0][0] for j in range(n)]))
-            problem.add_constraint(t * target[0][1] == pc.sum([p[j] * vec[j][0][1] for j in range(n)]))
-            problem.add_constraint(t * target[1][0] == pc.sum([p[j] * vec[j][1][0] for j in range(n)]))
-            problem.add_constraint(t * target[1][1] == pc.sum([p[j] * vec[j][1][1] for j in range(n)]))
+            problem.add_constraint(t * target.rot[0][0] == pc.sum([p[j] * vec[j][0][0] for j in range(n)]))
+            problem.add_constraint(t * target.rot[0][1] == pc.sum([p[j] * vec[j][0][1] for j in range(n)]))
+            problem.add_constraint(t * target.rot[0][2] == pc.sum([p[j] * vec[j][0][2] for j in range(n)]))
+            problem.add_constraint(t * target.rot[1][0] == pc.sum([p[j] * vec[j][1][0] for j in range(n)]))
+            problem.add_constraint(t * target.rot[1][1] == pc.sum([p[j] * vec[j][1][1] for j in range(n)]))
+            problem.add_constraint(t * target.rot[1][2] == pc.sum([p[j] * vec[j][1][2] for j in range(n)]))
+            problem.add_constraint(t * target.rot[2][0] == pc.sum([p[j] * vec[j][2][0] for j in range(n)]))
+            problem.add_constraint(t * target.rot[2][1] == pc.sum([p[j] * vec[j][2][1] for j in range(n)]))
+            problem.add_constraint(t * target.rot[2][2] == pc.sum([p[j] * vec[j][2][2] for j in range(n)]))
 
             problem.set_objective("max", t)
-            problem.solve(solver='mosek')
+            problem.solve(solver='cvxopt')
             output_t.append(float(t))
             output_length.append(length)
         return [output_length, output_t, n0]
@@ -136,7 +141,7 @@ class Program:
                     rn0 = np.random.default_rng().normal(size=3)
                     target.append(rn0 / np.linalg.norm(rn0))
                 elif program == "lp_channels":
-                    target.append(rand_unitary(2))
+                    target.append(bloch.get_random())
             # for each length generate input vectors - independent of target for now
             for length in tqdm(range(self.min_length, self.max_length)):
                 wg = WordGenerator(gates, length)
@@ -144,9 +149,9 @@ class Program:
                 if program == "lp":
                     v.append(sm.get_vectors())
                 elif program == "sdp":
-                    v.append(sm.get_matrices())
+                    v.append(sm.get_states())
                 elif program == "lp_channels":
-                    v.append(sm.get_matrices())
+                    v.append(sm.get_bloch_matrices())
 
             if program == "lp":
                 results = [executor.submit(self.perform_lp, v, target[i]) for i in range(threads)]
@@ -165,13 +170,13 @@ class Program:
 if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
-    #for i in range(20):
-    vis = 0.05 # round(1.0 - i/20, 2)
-    for _ in range(10):
-        start = timer()
-        program = Program(min_length=9, max_length=10)
-        res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp", threads=15)
-        writer.write_results(res, vis)
-        end = timer()
-        print(f'czas: {end - start} s')
+    #for i in range(10):
+    vis = 1.0 #round(1.0 - i/20, 2)
+    #for _ in range(5):
+    start = timer()
+    program = Program(min_length=4, max_length=5)
+    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="sdp", threads=1)
+    writer.write_results(res, vis)
+    end = timer()
+    print(f'czas: {end - start} s')
     # writer.file_to_png()
