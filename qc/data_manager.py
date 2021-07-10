@@ -61,8 +61,11 @@ class DataManager:
         self.plot_output(ll, t)
 
 
-def remove_far_points(vectors, target, out_length: int = 500):
-    return sorted(vectors, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
+def remove_far_points(points, target, out_length: int = 500):
+    if points[0].shape == (3, 1):  # euclidean norm
+        return sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
+    elif points[0].shape == (3, 3):  # operator norm
+        return sorted(points, key=lambda vector: np.linalg.norm(vector - target, ord='inf'))[0:out_length]
 
 
 class StatesManager(object):
@@ -110,9 +113,7 @@ class StatesManager(object):
         elif type == "s":
             rho0 = np.array([[1, 0], [0, 0]])
             mat = self.gate.get_gates(words)
-            states = [np.matmul(mat[i],
-                                np.matmul(rho0,
-                                          np.transpose(np.conjugate(mat[i])))) for i in range(len(mat) - 1)]
+            states = [mat[i]@rho0@np.matrix.getH(mat[i]) for i in range(len(mat) - 1)]
             for s in states:
                 output_file.write(str(s[0][0]) + "," + str(s[0][1]) + "," + str(s[1][0]) + "," + str(s[1][1]) + "\n")
             output_file.close()

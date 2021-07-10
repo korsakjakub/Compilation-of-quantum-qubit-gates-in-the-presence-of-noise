@@ -9,10 +9,10 @@ class Gate(object):
         'X': 1j * q.sigmax().full(),
         'Y': 1j * q.sigmay().full(),
         'Z': 1j * q.sigmaz().full(),
-        'T': (np.cos(np.pi/8) - np.sin(np.pi/8) * 1j) * q.phasegate(np.pi / 4).full(),
-        'R': (np.cos(np.pi/8) + np.sin(np.pi/8) * 1j) * q.phasegate(- np.pi / 4).full(),
+        'T': (np.cos(np.pi / 8) - np.sin(np.pi / 8) * 1j) * q.phasegate(np.pi / 4).full(),
+        'R': (np.cos(np.pi / 8) + np.sin(np.pi / 8) * 1j) * q.phasegate(- np.pi / 4).full(),
         "I": np.array([[1, 0], [0, 1]])
-    }
+    }  # TODO: Spróbować bez tych faz
 
     def __init__(self, vis: float = 1.0) -> None:
         self._gate = [[], []]
@@ -39,7 +39,7 @@ class Gate(object):
     # b, a*,
     # where a, and b are complex
     def set_by_params(self, a: complex, b: complex) -> Gate:
-        if np.isclose(a.real**2 + a.imag**2 + b.real**2 + b.imag**2, 1.0):
+        if np.isclose(a.real ** 2 + a.imag ** 2 + b.real ** 2 + b.imag ** 2, 1.0):
             self._gate = np.array(((a, - np.conj(b)), (b, np.conj(a))))
         else:
             print("\nNormalize the parameters!\n")
