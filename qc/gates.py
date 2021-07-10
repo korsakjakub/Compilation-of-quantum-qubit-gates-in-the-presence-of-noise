@@ -10,11 +10,13 @@ class Gate(object):
         'Y': 1j * q.sigmay().full(),
         'Z': 1j * q.sigmaz().full(),
         'T': (np.cos(np.pi/8) - np.sin(np.pi/8) * 1j) * q.phasegate(np.pi / 4).full(),
-        'R': (np.cos(np.pi/8) + np.sin(np.pi/8) * 1j) * q.phasegate(- np.pi / 4).full()
+        'R': (np.cos(np.pi/8) + np.sin(np.pi/8) * 1j) * q.phasegate(- np.pi / 4).full(),
+        "I": np.array([[1, 0], [0, 1]])
     }
 
-    def __init__(self) -> None:
+    def __init__(self, vis: float = 1.0) -> None:
         self._gate = [[], []]
+        self.visibility = vis
 
     @property
     def gate(self) -> np.array:
@@ -46,5 +48,12 @@ class Gate(object):
     def __combine_gates(self, word: str) -> np.array:
         out = ((1, 0), (0, 1))
         for s in word:
-            out = np.matmul(out, self.gates[s])
+            out = self.visibility * np.matmul(out, self.gates[s]) + (1 - self.visibility) * self.gates["I"] / 2
         return out
+
+    def get_gates(self, words) -> np.ndarray:
+        matrices = np.zeros(shape=(len(words), 2, 2))
+        for i in range(len(words)):
+            g = self.set_by_word(words[i])
+            matrices[i] = g.gate
+        return matrices
