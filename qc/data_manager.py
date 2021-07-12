@@ -37,7 +37,6 @@ class DataManager:
         for result in results:
             ll.append(result[0])
             t.append(result[1])
-            n0.append(result[2])
         tt = np.transpose(t)
         for i in range(len(ll[0])):
             output_file = open(self.dir + str(ll[0][i]) + "V" + str(vis), "a")

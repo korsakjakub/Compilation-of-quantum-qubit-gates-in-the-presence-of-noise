@@ -5,14 +5,14 @@ import qutip.qip.operations.gates as q
 
 class Gate(object):
     gates = {
-        'H': 1j * q.hadamard_transform().full(),
-        'X': 1j * q.sigmax().full(),
-        'Y': 1j * q.sigmay().full(),
-        'Z': 1j * q.sigmaz().full(),
-        'T': (np.cos(np.pi / 8) - np.sin(np.pi / 8) * 1j) * q.phasegate(np.pi / 4).full(),
-        'R': (np.cos(np.pi / 8) + np.sin(np.pi / 8) * 1j) * q.phasegate(- np.pi / 4).full(),
+        'H': 1 / np.sqrt(2) * np.array([[1, 1], [1, -1]], dtype=complex),
+        'X': np.array([[0, 1], [1, 0]], dtype=complex),
+        'Y': np.array([[0, -1j], [1j, 0]], dtype=complex),
+        'Z': np.array([[1, 0], [0, -1]], dtype=complex),
+        'T': q.phasegate(np.pi / 4).full(),
+        'R': q.phasegate(- np.pi / 4).full(),
         "I": np.array([[1, 0], [0, 1]])
-    }  # TODO: Spróbować bez tych faz
+    }
 
     def __init__(self, vis: float = 1.0) -> None:
         self._gate = [[], []]
@@ -52,7 +52,7 @@ class Gate(object):
         return out
 
     def get_gates(self, words) -> np.ndarray:
-        matrices = np.zeros(shape=(len(words), 2, 2))
+        matrices = np.zeros(shape=(len(words), 2, 2), dtype=complex)
         for i in range(len(words)):
             g = self.set_by_word(words[i])
             matrices[i] = g.gate
