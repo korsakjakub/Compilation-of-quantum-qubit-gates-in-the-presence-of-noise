@@ -64,7 +64,7 @@ def remove_far_points(points, target, out_length: int = 500):
     if points[0].shape == (3, 1):  # euclidean norm
         return sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
     elif points[0].shape == (3, 3):  # operator norm
-        return sorted(points, key=lambda vector: np.linalg.norm(vector - target, ord='inf'))[0:out_length]
+        return sorted(points, key=lambda vector: np.linalg.norm(vector - target.rot, ord=np.inf))[0:out_length]
 
 
 class StatesManager(object):

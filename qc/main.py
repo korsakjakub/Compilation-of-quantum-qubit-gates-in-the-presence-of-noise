@@ -1,7 +1,9 @@
 import concurrent.futures
+from time import sleep
 from timeit import default_timer as timer
 
 import picos as pc
+from numpy import random
 from picos import Problem
 from qutip import rand_unitary
 from tqdm import tqdm
@@ -26,7 +28,7 @@ class Program:
             index = length - self.min_length
             quantum_states = v[index].states
             number_of_states = len(quantum_states)
-            maximally_mixed_state = np.eye(2, dtype=complex) / 2
+            maximally_mixed_state = np.eye(2, dtype=complex) / 2.0001
             # define rescaled quantum state
             rho = pc.HermitianVariable('rho', (2, 2))  # rho scaled with alpha
             problem.add_constraint(rho >> 0)
@@ -34,13 +36,13 @@ class Program:
             # IMPORTANT CONDITION
             problem.add_constraint(visibility <= 1)
             # define probabilities
-            probabilities = [pc.RealVariable('p[{0}]'.format(i), lower=0) for i in
-                             range(number_of_states)]
-            problem.add_constraint(1 == pc.sum([probabilities[i] for i in range(number_of_states)]))
+            probabilities = [pc.RealVariable('p[{0}]'.format(i)) for i in
+                             range(number_of_states - 1)]
+            problem.add_constraint(1 == pc.sum([probabilities[i] for i in range(number_of_states - 1)]))
             # we want noisy quantum state to belong to convex hull of available states
             problem.add_constraint(
                 rho + (1 - visibility) * maximally_mixed_state == pc.sum(
-                    [probabilities[i] * quantum_states[i] for i in range(number_of_states)]))
+                    [probabilities[i] * quantum_states[i] for i in range(number_of_states - 1)]))
             problem.set_objective("max", visibility)
             print(problem)
             problem.solve(solver='cvxopt')
@@ -107,8 +109,7 @@ class Program:
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            # vec = remove_far_points(v[index].states, target=n0, out_length=500)
-            vec = v[index].states
+            vec = remove_far_points(v[index].states, target=n0, out_length=2000)
             n = len(vec)
 
             # dodaję zmienne
@@ -135,21 +136,17 @@ class Program:
             problem.solve(solver='cvxopt')
             output_t.append(float(t))
             output_length.append(length)
+
+            print("\ntarget: ")
+            print(target.rot)
+            print("output t: ")
+            print(output_t)
         return [output_length, output_t, n0]
 
     def threaded_program(self, gates: list, bloch: BlochMatrix, gate: Gate, program: str, threads: int = 2):
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             v = []
-            target = []
-
-            # generate random targets for each thread
-            for _ in range(threads):
-                if program == "lp":
-                    rn0 = np.random.default_rng().normal(size=3)
-                    target.append(rn0 / np.linalg.norm(rn0))
-                elif program == "lp_channels":
-                    target.append(bloch.get_random())
             # for each length generate input vectors - independent of target for now
             for length in tqdm(range(self.min_length, self.max_length)):
                 wg = WordGenerator(gates, length)
@@ -161,30 +158,47 @@ class Program:
                 elif program == "lp_channels":
                     v.append(sm.get_bloch_matrices())
 
+            results = []
+            seed = random.randint(1, 1000000)
+            # Generate target states for each thread
             if program == "lp":
-                results = [executor.submit(self.perform_lp, v, target[i]) for i in range(threads)]
+                for _ in range(threads):
+                    sleep(0.005)
+                    seed += 1
+                    random.seed(seed)
+                    rn0 = np.random.default_rng().normal(size=3)
+                    target = rn0 / np.linalg.norm(rn0)
+                    results.append(executor.submit(self.perform_lp, v, target))
             elif program == "sdp":
                 results = [executor.submit(self.perform_sdp, v) for _ in range(threads)]
             elif program == "lp_channels":
-                results = [executor.submit(self.perform_lp_channels, v, target[i]) for i in range(threads)]
+                for _ in range(threads):
+                    sleep(0.05)
+                    seed += 1
+                    target = bloch.get_random(seed)
+                    results.append(executor.submit(self.perform_lp_channels, v, target))
             else:
                 return None
 
             for f in concurrent.futures.as_completed(results):
-                results.append(f.result())
+                try:
+                    results.append(f.result())
+                except ValueError:
+                    print("cannot produce result")
         return results[threads:]
 
 
 if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
-    #for i in range(10):
-    vis = 1.0 #round(1.0 - i/20, 2)
-    #for _ in range(5):
-    start = timer()
-    program = Program(min_length=1, max_length=2)
-    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="sdp", threads=1)
-    writer.write_results(res, vis)
-    end = timer()
-    print(f'czas: {end - start} s')
+    for i in range(20):
+        vis = round(1.0 - i/20, 2)
+        #for _ in range(15):
+        start = timer()
+        program = Program(min_length=3, max_length=8)
+        res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
+                                       threads=2)
+        writer.write_results(res, vis)
+        end = timer()
+        print(f'czas: {end - start} s')
     # writer.file_to_png()

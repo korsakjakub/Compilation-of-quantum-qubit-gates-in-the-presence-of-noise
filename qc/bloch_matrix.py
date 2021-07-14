@@ -64,15 +64,13 @@ class BlochMatrix(object):
         c = g[2]
         d = g[3]
 
-        print("g: ")
-        print(g)
-
         self._rot = np.array(((a ** 2 - b ** 2 - c ** 2 + d ** 2, 2 * (a * b - c * d), 2 * (b * d + a * c)),
                               (-2 * (a * b + c * d), a ** 2 - b ** 2 + c ** 2 - d ** 2, 2 * (a * d - b * c)),
                               (2 * (b * d - a * c), - 2 * (b * c + a * d), a ** 2 + b ** 2 - c ** 2 - d ** 2)))
         return self
 
-    def get_random(self):
+    def get_random(self, seed):
+        np.random.seed(seed)
         rand_list = np.random.random_sample(size=4)
         rand_list /= np.linalg.norm(rand_list)
         return self.set_by_gate(rand_list)
@@ -87,7 +85,7 @@ class BlochMatrix(object):
     # returns a list of 3x3 orthogonal matrices from a list of words
     def get_bloch_matrices(self, words) -> np.ndarray:
         matrices = np.zeros(shape=(len(words), 3, 3))
-        for i in range(len(words)):
+        for i in range(len(words) - 1):
             g = self.combine_with_noise(words[i]).rot
             matrices[i] = g
         return np.unique(matrices, axis=0)
