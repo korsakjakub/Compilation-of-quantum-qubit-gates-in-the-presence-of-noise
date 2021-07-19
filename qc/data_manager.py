@@ -74,7 +74,7 @@ class StatesManager(object):
         self.gate = gate
         self.wg = wg
         self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) \
-                    + "".join(wg.input_set) + ".txt "
+                    + "".join(wg.input_set) + ".npy"
         self._states: list = []
 
     @property
@@ -86,46 +86,31 @@ class StatesManager(object):
         self._states = value
 
     def _write_states(self, type: str) -> np.ndarray:
-        output_file = open(self.path, "a")
         words = self.wg.generate_words_shorter_than()
         if type == "v":
             mat = self.bloch.get_bloch_matrices(words)
             vectors = get_bloch_vectors(mat)
-            for vec in vectors:
-                output_file.write(str(vec[0]) + "," + str(vec[1]) + "," + str(vec[2]) + "\n")
-            output_file.close()
+            np.save(self.path, vectors)
             return np.array(vectors)
         elif type == "m":
             mat = self.gate.get_gates(words)
-            for m in mat:
-                output_file.write(str(m[0][0]) + "," + str(m[0][1]) + "," + str(m[1][0]) + "," + str(m[1][1]) + "\n")
-            output_file.close()
+            np.save(self.path, mat)
             return np.array(mat)
         elif type == "b":
             mat = self.bloch.get_bloch_matrices(words)
-            for m in mat:
-                output_file.write(str(m[0][0]) + "," + str(m[0][1]) + "," + str(m[0][2]) + "," +
-                                  str(m[1][0]) + "," + str(m[1][1]) + "," + str(m[1][2]) + "," +
-                                  str(m[2][0]) + "," + str(m[2][1]) + "," + str(m[2][2]) + "\n")
-            output_file.close()
+            np.save(self.path, mat)
             return np.array(mat)
         elif type == "s":
             rho0 = np.array([[1, 0], [0, 0]])
             mat = self.gate.get_gates(words)
-            states = [mat[i]@rho0@np.matrix.getH(mat[i]) for i in range(len(mat) - 1)]
-            for s in states:
-                output_file.write(str(s[0][0]) + "," + str(s[0][1]) + "," + str(s[1][0]) + "," + str(s[1][1]) + "\n")
-            output_file.close()
+            states = [mat[i] @ rho0 @ np.matrix.getH(mat[i]) for i in range(len(mat) - 1)]
+            np.save(self.path, states)
             return np.array(states)
 
     def get_vectors(self) -> StatesManager:
         if os.path.isfile(self.path):
-            vectors = []
-            with open(self.path) as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                for row in csv_reader:
-                    vectors.append(np.array([float(row[0]), float(row[1]), float(row[2])]))
-            self._states = np.array(vectors)
+            data = np.load(self.path)
+            self._states = np.array(data)
         else:
             self._states = self._write_states("v")
         return self
@@ -144,26 +129,14 @@ class StatesManager(object):
 
     def get_matrices(self) -> StatesManager:
         if os.path.isfile(self.path):
-            matrices = []
-            with open(self.path) as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                for row in csv_reader:
-                    matrices.append(np.array([[float(row[0]), float(row[1])], [float(row[2]), float(row[3])]]))
-                self._states = np.array(matrices)
+            self._states = np.load(self.path)
         else:
             self._states = self._write_states("m")
         return self
 
     def get_bloch_matrices(self) -> StatesManager:
         if os.path.isfile(self.path):
-            matrices = []
-            with open(self.path) as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                for row in csv_reader:
-                    matrices.append(np.array([[float(row[0]), float(row[1]), float(row[2])],
-                                              [float(row[3]), float(row[4]), float(row[5])],
-                                              [float(row[6]), float(row[7]), float(row[8])]]))
-                self._states = np.array(matrices)
+            self._states = np.load(self.path)
         else:
             self._states = self._write_states("b")
         return self

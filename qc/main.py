@@ -173,8 +173,8 @@ class Program:
                 results = [executor.submit(self.perform_sdp, v) for _ in range(threads)]
             elif program == "lp_channels":
                 for _ in range(threads):
-                    sleep(0.05)
-                    seed += 1
+                    sleep(0.5)
+                    seed += 123
                     target = bloch.get_random(seed)
                     results.append(executor.submit(self.perform_lp_channels, v, target))
             else:
@@ -195,9 +195,9 @@ if __name__ == "__main__":
         vis = round(1.0 - i/20, 2)
         #for _ in range(15):
         start = timer()
-        program = Program(min_length=3, max_length=8)
+        program = Program(min_length=1, max_length=11)
         res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
-                                       threads=2)
+                                       threads=3)
         writer.write_results(res, vis)
         end = timer()
         print(f'czas: {end - start} s')
