@@ -85,7 +85,18 @@ class BlochMatrix(object):
     # returns a list of 3x3 orthogonal matrices from a list of words
     def get_bloch_matrices(self, words) -> np.ndarray:
         matrices = np.zeros(shape=(len(words), 3, 3))
+        k = 0
         for i in range(len(words) - 1):
             g = self.combine_with_noise(words[i]).rot
-            matrices[i] = g
-        return np.unique(matrices, axis=0)
+            if np.isclose(np.linalg.det(g), 0.0):
+                continue
+            if not np.any([np.allclose(matrices[j], g / np.linalg.det(g)) for j in range(len(matrices))]):
+                matrices[i] = g
+                k += 1
+            # else:
+                # print("close")
+                # print(g/np.linalg.det(g))
+
+        print("before: " + str(len(matrices)) + ", after: " + str(k))
+        # return np.unique(matrices, axis=0)
+        return matrices

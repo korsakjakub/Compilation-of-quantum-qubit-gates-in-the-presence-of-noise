@@ -109,7 +109,9 @@ class Program:
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(v[index].states, target=n0, out_length=2000)
+            vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)], axis=0),
+                                    target=n0, out_length=2000)
+            # vec = remove_far_points(v[index].states, target=n0, out_length=2000)
             n = len(vec)
 
             # dodaję zmienne
@@ -158,6 +160,7 @@ class Program:
                 elif program == "lp_channels":
                     v.append(sm.get_bloch_matrices())
 
+            return []
             results = []
             seed = random.randint(1, 1000000)
             # Generate target states for each thread
@@ -191,14 +194,14 @@ class Program:
 if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
-    for i in range(20):
-        vis = round(1.0 - i/20, 2)
-        #for _ in range(15):
-        start = timer()
-        program = Program(min_length=1, max_length=11)
-        res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
-                                       threads=3)
-        writer.write_results(res, vis)
-        end = timer()
-        print(f'czas: {end - start} s')
+    #for i in range(20):
+    vis = 1.0 # round(1.0 - i/20, 2)
+    #for _ in range(15):
+    start = timer()
+    program = Program(min_length=6, max_length=8)
+    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
+                                   threads=1)
+    writer.write_results(res, vis)
+    end = timer()
+    print(f'czas: {end - start} s')
     # writer.file_to_png()

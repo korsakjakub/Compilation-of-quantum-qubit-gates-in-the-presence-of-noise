@@ -10,6 +10,7 @@ class WordGenerator:
 
     def generate_words(self) -> list:
         self.__generate_words_rec("", self.length)
+        self._remove_unnecessary(self.length)
         return self.output
 
     def __generate_words_rec(self, word: str, length: int) -> None:

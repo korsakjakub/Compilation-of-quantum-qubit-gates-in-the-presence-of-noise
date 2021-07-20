@@ -75,6 +75,12 @@ class StatesManager(object):
         self.wg = wg
         self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) \
                     + "".join(wg.input_set) + ".npy"
+        self.paths = []
+        for vi in np.arange(0.05, self.bloch.visibility, 0.05):
+            temp = []
+            for le in range(1, wg.length):
+                temp.append(cf.WORDS_DIR + 'V' + str(vi) + 'L' + str(le) + ''.join(wg.input_set) + '.npy')
+            self.paths.append(temp)
         self._states: list = []
 
     @property
@@ -86,7 +92,7 @@ class StatesManager(object):
         self._states = value
 
     def _write_states(self, type: str) -> np.ndarray:
-        words = self.wg.generate_words_shorter_than()
+        words = self.wg.generate_words()
         if type == "v":
             mat = self.bloch.get_bloch_matrices(words)
             vectors = get_bloch_vectors(mat)
