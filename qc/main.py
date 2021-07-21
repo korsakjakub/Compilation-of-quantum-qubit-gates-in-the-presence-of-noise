@@ -5,8 +5,6 @@ from timeit import default_timer as timer
 import picos as pc
 from numpy import random
 from picos import Problem
-from qutip import rand_unitary
-from tqdm import tqdm
 
 from qc.bloch_matrix import *
 from qc.data_manager import DataManager, StatesManager, remove_far_points
@@ -160,7 +158,7 @@ class Program:
                 elif program == "lp_channels":
                     v.append(sm.get_bloch_matrices())
 
-            return []
+            #return []
             results = []
             seed = random.randint(1, 1000000)
             # Generate target states for each thread
@@ -194,14 +192,14 @@ class Program:
 if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
-    #for i in range(20):
-    vis = 1.0 # round(1.0 - i/20, 2)
-    #for _ in range(15):
-    start = timer()
-    program = Program(min_length=6, max_length=8)
-    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
-                                   threads=1)
-    writer.write_results(res, vis)
-    end = timer()
-    print(f'czas: {end - start} s')
+    for i in range(10):
+        vis = round(1.0 - i/20, 2)
+        # for _ in range(15):
+        start = timer()
+        program = Program(min_length=1, max_length=10)
+        res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
+                                       threads=14)
+        writer.write_results(res, vis)
+        end = timer()
+        print(f'czas: {end - start} s')
     # writer.file_to_png()

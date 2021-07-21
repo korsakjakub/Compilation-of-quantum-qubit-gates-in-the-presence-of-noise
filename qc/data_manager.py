@@ -73,14 +73,10 @@ class StatesManager(object):
         self.bloch = bloch
         self.gate = gate
         self.wg = wg
-        self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) \
-                    + "".join(wg.input_set) + ".npy"
-        self.paths = []
-        for vi in np.arange(0.05, self.bloch.visibility, 0.05):
-            temp = []
-            for le in range(1, wg.length):
-                temp.append(cf.WORDS_DIR + 'V' + str(vi) + 'L' + str(le) + ''.join(wg.input_set) + '.npy')
-            self.paths.append(temp)
+        # self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) \
+                    # + "".join(wg.input_set) + ".npy"
+        self.path = cf.WORDS_DIR + "L" + str(wg.length) \
+            + "".join(wg.input_set) + ".npy"
         self._states: list = []
 
     @property
@@ -128,9 +124,9 @@ class StatesManager(object):
                 csv_reader = csv.reader(csv_file, delimiter=',')
                 for row in csv_reader:
                     matrices.append(np.array([[float(row[0]), float(row[1])], [float(row[2]), float(row[3])]]))
-                self._states = np.array(matrices)
+                self._states = self.bloch.add_noise(np.array(matrices))
         else:
-            self._states = self._write_states("s")
+            self._states = self.bloch.add_noise(self._write_states("s"))
         return self
 
     def get_matrices(self) -> StatesManager:
@@ -142,9 +138,9 @@ class StatesManager(object):
 
     def get_bloch_matrices(self) -> StatesManager:
         if os.path.isfile(self.path):
-            self._states = np.load(self.path)
+            self._states = self.bloch.add_noise(np.load(self.path), self.wg.length)
         else:
-            self._states = self._write_states("b")
+            self._states = self.bloch.add_noise(self._write_states("b"), self.wg.length)
         return self
 
 

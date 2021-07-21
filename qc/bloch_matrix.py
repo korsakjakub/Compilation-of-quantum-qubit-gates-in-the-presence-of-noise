@@ -6,13 +6,13 @@ from typing import List
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from tqdm import tqdm
 
 
 class Axis(Enum):
     X = 1
     Y = 2
     Z = 3
-
 
 
 def get_rotation_matrix(axis: Axis, angle):
@@ -75,28 +75,37 @@ class BlochMatrix(object):
         rand_list /= np.linalg.norm(rand_list)
         return self.set_by_gate(rand_list)
 
-    def combine_with_noise(self, word: List[str]):
+    def combine(self, word: List[str]):
         self._rot = np.identity(3)
         for g in word:
-            gate = self.get_universal(g)
-            self._rot = np.matmul(self._rot, self.visibility * gate)
+            self._rot = np.matmul(self._rot, self.get_universal(g))
         return self
+
+    def add_noise(self, mat: np.ndarray, length: int) -> np.ndarray:
+        # for m in mat:
+        for i in range(len(mat)):
+            mat[i] *= self.visibility**length
+        return np.asarray(mat)
 
     # returns a list of 3x3 orthogonal matrices from a list of words
     def get_bloch_matrices(self, words) -> np.ndarray:
-        matrices = np.zeros(shape=(len(words), 3, 3))
+        matrices = []
         k = 0
-        for i in range(len(words) - 1):
-            g = self.combine_with_noise(words[i]).rot
+        is_close = False
+        for i in tqdm(range(len(words) - 1)):
+            g = self.combine(words[i]).rot
             if np.isclose(np.linalg.det(g), 0.0):
                 continue
-            if not np.any([np.allclose(matrices[j], g / np.linalg.det(g)) for j in range(len(matrices))]):
-                matrices[i] = g
-                k += 1
-            # else:
-                # print("close")
-                # print(g/np.linalg.det(g))
+            gd = g / np.linalg.det(g)
+            for j in range(len(matrices)):
+                if np.any(np.allclose(matrices[j], gd)):
+                    is_close = True
+                    break
+            if is_close:
+                is_close = False
+                continue
+            matrices.append(g)
+            k += 1
 
-        print("before: " + str(len(matrices)) + ", after: " + str(k))
-        # return np.unique(matrices, axis=0)
-        return matrices
+        print("before: " + str(len(words)) + ", after: " + str(k))
+        return np.asarray(matrices)
