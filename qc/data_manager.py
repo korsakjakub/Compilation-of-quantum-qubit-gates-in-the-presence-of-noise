@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import csv
-import enum
 import os.path
+from datetime import datetime
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -11,8 +11,6 @@ from qc.bloch_matrix import BlochMatrix, get_bloch_vectors
 from qc.config import Config as cf
 from qc.gates import Gate
 from qc.word_generator import WordGenerator
-
-from datetime import datetime
 
 
 class DataManager:
@@ -34,14 +32,17 @@ class DataManager:
         t = []
         n0 = []
         ll = []
+        d = []
         for result in results:
             ll.append(result[0])
             t.append(result[1])
+            d.append(result[3])
         tt = np.transpose(t)
+        dd = np.transpose(d)
         for i in range(len(ll[0])):
             output_file = open(self.dir + str(ll[0][i]) + "V" + str(vis), "a")
             for j in range(len(tt[i])):
-                output_file.write(str(tt[i][j]) + "\n")
+                output_file.write(str(tt[i][j]) + "\t" + str(dd[i][j]) + "\n")
             output_file.close()
 
     def file_to_png(self) -> None:
@@ -73,8 +74,6 @@ class StatesManager(object):
         self.bloch = bloch
         self.gate = gate
         self.wg = wg
-        # self.path = cf.WORDS_DIR + "V" + str(self.bloch.visibility) + "L" + str(wg.length) \
-                    # + "".join(wg.input_set) + ".npy"
         self.path = cf.WORDS_DIR + "L" + str(wg.length) \
             + "".join(wg.input_set) + ".npy"
         self._states: list = []
@@ -82,10 +81,6 @@ class StatesManager(object):
     @property
     def states(self) -> list:
         return self._states
-
-    @states.setter
-    def states(self, value):
-        self._states = value
 
     def _write_states(self, type: str) -> np.ndarray:
         words = self.wg.generate_words()
@@ -124,9 +119,9 @@ class StatesManager(object):
                 csv_reader = csv.reader(csv_file, delimiter=',')
                 for row in csv_reader:
                     matrices.append(np.array([[float(row[0]), float(row[1])], [float(row[2]), float(row[3])]]))
-                self._states = self.bloch.add_noise(np.array(matrices))
+                self._states = self.bloch.add_noise(np.array(matrices), self.wg.length)
         else:
-            self._states = self.bloch.add_noise(self._write_states("s"))
+            self._states = self.bloch.add_noise(self._write_states("s"), self.wg.length)
         return self
 
     def get_matrices(self) -> StatesManager:
@@ -145,6 +140,6 @@ class StatesManager(object):
 
 
 if __name__ == "__main__":
-    sm = StatesManager(bloch=BlochMatrix(), wg=WordGenerator(['H', 'T', 'R'], 2))
+    sm = StatesManager(bloch=BlochMatrix(), wg=WordGenerator(['H', 'T', 'R'], 2), gate=Gate())
     v = sm.get_matrices()
     print(v.states)

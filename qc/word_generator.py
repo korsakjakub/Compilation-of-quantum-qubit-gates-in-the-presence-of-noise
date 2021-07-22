@@ -1,4 +1,5 @@
 # Generate all possible words of given length
+from tqdm import tqdm
 
 
 class WordGenerator:
@@ -9,6 +10,7 @@ class WordGenerator:
         self.length = length
 
     def generate_words(self) -> list:
+        print("Generating words for length " + str(self.length))
         self.__generate_words_rec("", self.length)
         self._remove_unnecessary(self.length)
         return self.output

@@ -82,7 +82,6 @@ class BlochMatrix(object):
         return self
 
     def add_noise(self, mat: np.ndarray, length: int) -> np.ndarray:
-        # for m in mat:
         for i in range(len(mat)):
             mat[i] *= self.visibility**length
         return np.asarray(mat)
@@ -92,6 +91,7 @@ class BlochMatrix(object):
         matrices = []
         k = 0
         is_close = False
+        print("Generating matrices")
         for i in tqdm(range(len(words) - 1)):
             g = self.combine(words[i]).rot
             if np.isclose(np.linalg.det(g), 0.0):

@@ -18,13 +18,13 @@ class Program:
         self.min_length = min_length
         self.max_length = max_length
 
-    def perform_sdp(self, v):
+    def perform_sdp(self, inputs):
         output_a = []
         output_length = []
         for length in tqdm(range(self.min_length, self.max_length)):
             problem = Problem()
             index = length - self.min_length
-            quantum_states = v[index].states
+            quantum_states = inputs[index].states
             number_of_states = len(quantum_states)
             maximally_mixed_state = np.eye(2, dtype=complex) / 2.0001
             # define rescaled quantum state
@@ -99,6 +99,7 @@ class Program:
     def perform_lp_channels(self, v, n0):
         output_t = []
         output_length = []
+        output_dist = []
         target = n0
 
         for length in tqdm(range(self.min_length, self.max_length)):
@@ -107,8 +108,9 @@ class Program:
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)], axis=0),
-                                    target=n0, out_length=2000)
+            #vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)], axis=0),
+                                    #target=n0, out_length=200)
+            vec = np.concatenate([v[i].states for i in range(index, length)], axis=0)
             # vec = remove_far_points(v[index].states, target=n0, out_length=2000)
             n = len(vec)
 
@@ -137,11 +139,20 @@ class Program:
             output_t.append(float(t))
             output_length.append(length)
 
-            print("\ntarget: ")
-            print(target.rot)
-            print("output t: ")
-            print(output_t)
-        return [output_length, output_t, n0]
+        #   print("\nprobs: ")
+        #   print([float(p[i]) for i in range(len(p))])
+        #   print("\ntarget: ")
+        #   print(target.rot)
+        #   print("\nout: ")
+            out_rot = sum([float(p[i]) * vec[i] for i in range(n)])
+        #   print(out_rot)
+        #   print("output t: ")
+        #   print(output_t)
+        #   print("\ndistance: ")
+            dist = np.linalg.norm(out_rot - target.rot, ord=np.inf)
+            output_dist.append(dist)
+        #   print(dist)
+        return [output_length, output_t, n0, output_dist]
 
     def threaded_program(self, gates: list, bloch: BlochMatrix, gate: Gate, program: str, threads: int = 2):
 
@@ -158,7 +169,7 @@ class Program:
                 elif program == "lp_channels":
                     v.append(sm.get_bloch_matrices())
 
-            #return []
+            return []
             results = []
             seed = random.randint(1, 1000000)
             # Generate target states for each thread
@@ -192,14 +203,14 @@ class Program:
 if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
-    for i in range(10):
-        vis = round(1.0 - i/20, 2)
-        # for _ in range(15):
-        start = timer()
-        program = Program(min_length=1, max_length=10)
-        res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
-                                       threads=14)
-        writer.write_results(res, vis)
-        end = timer()
-        print(f'czas: {end - start} s')
+    start = timer()
+    # for v in range(20):
+    vis = 1.0  # round(1.0 - v/20, 2)
+    # for _ in range(5):
+    program = Program(min_length=10, max_length=11)
+    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
+                                   threads=1)
+    writer.write_results(res, vis)
+    end = timer()
+    print(f'czas: {end - start} s')
     # writer.file_to_png()
