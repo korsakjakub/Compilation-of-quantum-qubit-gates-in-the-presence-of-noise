@@ -22,7 +22,7 @@ class WordGenerator:
         for i in range(len(self.input_set)):
             self.__generate_words_rec(word + self.input_set[i], length - 1)
 
-    def generate_words_shorter_than(self) -> list:
+    def generate_words_shorter_than(self) -> list[str]:
         for i in range(self.length):
             self.__generate_words_rec("", i + 1)
             self._remove_unnecessary(i + 1)
@@ -35,3 +35,9 @@ class WordGenerator:
             length = self.length
         for letter in self.input_set:
             self.output.remove(letter * length)
+
+    def get_words_dictionary(self) -> dict[int, list]:
+        words = {}
+        for k in range(1, self.length):
+            words[k] = self.generate_words()
+        return words

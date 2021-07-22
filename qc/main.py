@@ -9,7 +9,7 @@ from picos import Problem
 from qc.bloch_matrix import *
 from qc.data_manager import DataManager, StatesManager, remove_far_points
 from qc.gates import Gate
-from qc.word_generator import WordGenerator
+from qworder.word_generator import WordGenerator
 
 
 class Program:
