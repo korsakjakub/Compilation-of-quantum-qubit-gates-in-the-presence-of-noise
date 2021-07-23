@@ -35,41 +35,49 @@ class Cascader(object):
         rules = {}
         if os.path.isfile(self._rules_path):
             with open(self._rules_path) as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter='->')
+                csv_reader = csv.reader(csv_file, delimiter=',')
                 for row in csv_reader:
                     rules[row[0]] = row[1]
         return rules
 
-    def cascade(self):
+    def cascade(self) -> dict[int, list]:
         words = self._wg.get_words_dictionary()
         for length in words:
-            for word in words[length]:
+            #for word in words[length]:
+            for k in range(len(words[length])):
+                word = words[length][k]
                 for i in range(len(word) - 1):
                     sub = word[i] + word[i+1]
                     if sub in self.rules:
-                        word.replace(sub, self.rules[sub])
+                        words[length][k] = word.replace(sub, self.rules[sub])
+                        continue
                     replacement = self._check_product(word[i], word[i+1])
                     if replacement:
-                        word.replace(sub, replacement)
+                        word = word.replace(sub, replacement)
                         self.rules[sub] = replacement
+                    else:
+                        self.rules[sub] = sub
+            words[length] = list(np.unique(words[length]))
         self._write_rules()
         return words
 
     def _check_product(self, a: str, b: str) -> str:
-        if not self.base_gates[a] or not self.base_gates[b]:
+        if not len(self.base_gates[a]) or not len(self.base_gates[b]):
             return ""
         for letter in self.base_gates:
-            if np.allclose(np.matmul(self.base_gates[a], self.base_gates[b]), self.base_gates[letter]):
+            bprod = np.matmul(self.base_gates[a], self.base_gates[b])
+            bg = self.base_gates[letter]
+            if np.allclose(bprod, bg):
                 return letter
         return ""
 
     def _write_rules(self):
         output_file = open(self._rules_path, "w")
         for rule in self.rules:
-            output_file.write(rule + "->" + self.rules[rule] + "\n")
+            output_file.write(rule + "," + self.rules[rule] + "\n")
         output_file.close()
 
 
 if __name__ == '__main__':
-    cascader = Cascader(WordGenerator(['H', 'T'], 3))
-    cascader.cascade()
+    cascader = Cascader(WordGenerator(['H', 'T', 'R', 'X', 'Y', 'Z', 'I'], 3))
+    print(cascader.cascade())

@@ -1,1 +1,1 @@
-PATH = "/"
+PATH = "existing_rules.txt"
