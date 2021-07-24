@@ -4,13 +4,13 @@ import csv
 import os
 
 import numpy as np
+from typing import Dict
 
 from qworder import config
 from qworder.word_generator import WordGenerator
 
 
 class Cascader(object):
-
     base_gates = {
         'H': np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]),
         'X': np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),
@@ -40,18 +40,18 @@ class Cascader(object):
                     rules[row[0]] = row[1]
         return rules
 
-    def cascade(self) -> dict[int, list]:
+    def cascade(self) -> Dict[int, list]:
         words = self._wg.get_words_dictionary()
         for length in words:
-            #for word in words[length]:
+            # for word in words[length]:
             for k in range(len(words[length])):
                 word = words[length][k]
                 for i in range(len(word) - 1):
-                    sub = word[i] + word[i+1]
+                    sub = word[i] + word[i + 1]
                     if sub in self.rules:
                         words[length][k] = word.replace(sub, self.rules[sub])
                         continue
-                    replacement = self._check_product(word[i], word[i+1])
+                    replacement = self._check_product(word[i], word[i + 1])
                     if replacement:
                         word = word.replace(sub, replacement)
                         self.rules[sub] = replacement
