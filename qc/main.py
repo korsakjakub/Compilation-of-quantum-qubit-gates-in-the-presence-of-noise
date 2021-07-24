@@ -169,7 +169,6 @@ class Program:
                 elif program == "lp_channels":
                     v.append(sm.get_bloch_matrices())
 
-            return []
             results = []
             seed = random.randint(1, 1000000)
             # Generate target states for each thread
@@ -204,13 +203,14 @@ if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
     start = timer()
-    # for v in range(20):
-    vis = 1.0  # round(1.0 - v/20, 2)
-    # for _ in range(5):
-    program = Program(min_length=10, max_length=11)
-    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
-                                   threads=1)
-    writer.write_results(res, vis)
+    for v in tqdm(range(10)):
+        vis = round(1.0 - v/20, 2)
+        for i in tqdm(range(30)):
+            print(str(i) + "-th iteration over " + str(vis))
+            program = Program(min_length=1, max_length=11)
+            res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
+                                           threads=15)
+            writer.write_results(res, vis)
     end = timer()
     print(f'czas: {end - start} s')
     # writer.file_to_png()
