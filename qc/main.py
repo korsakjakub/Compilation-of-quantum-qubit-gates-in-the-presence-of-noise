@@ -9,7 +9,7 @@ from picos import Problem
 from qc.bloch_matrix import *
 from qc.data_manager import DataManager, StatesManager, remove_far_points
 from qc.gates import Gate
-from qc.word_generator import WordGenerator
+from qworder.word_generator import WordGenerator
 
 
 class Program:
@@ -203,6 +203,7 @@ if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
     start = timer()
+
     for v in tqdm(range(10)):
         vis = round(1.0 - v/20, 2)
         for i in tqdm(range(30)):

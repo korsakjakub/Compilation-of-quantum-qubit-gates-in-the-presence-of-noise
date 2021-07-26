@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from qc.bloch_matrix import BlochMatrix, get_bloch_vectors
 from qc.config import Config as cf
 from qc.gates import Gate
-from qc.word_generator import WordGenerator
+from qworder.word_generator import WordGenerator
 
 
 class DataManager:

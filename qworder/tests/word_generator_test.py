@@ -1,6 +1,6 @@
 import unittest
 
-from qc.word_generator import WordGenerator
+from qworder.word_generator import WordGenerator
 
 
 class GenerateWordsTest(unittest.TestCase):
