@@ -169,7 +169,6 @@ class Program:
                 elif program == "lp_channels":
                     v.append(sm.get_bloch_matrices())
 
-            return []
             results = []
             seed = random.randint(1, 1000000)
             # Generate target states for each thread
@@ -207,7 +206,7 @@ if __name__ == "__main__":
     # for v in range(20):
     vis = 1.0  # round(1.0 - v/20, 2)
     # for _ in range(5):
-    program = Program(min_length=10, max_length=11)
+    program = Program(min_length=1, max_length=2)
     res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
                                    threads=1)
     writer.write_results(res, vis)
