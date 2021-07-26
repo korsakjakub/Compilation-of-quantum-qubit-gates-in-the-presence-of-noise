@@ -108,9 +108,9 @@ class Program:
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            #vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)], axis=0),
-                                    #target=n0, out_length=200)
-            vec = np.concatenate([v[i].states for i in range(index, length)], axis=0)
+            vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)], axis=0),
+                                    target=n0, out_length=200)
+            #vec = np.concatenate([v[i].states for i in range(index, length)], axis=0)
             # vec = remove_far_points(v[index].states, target=n0, out_length=2000)
             n = len(vec)
 
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     # for v in range(20):
     vis = 1.0  # round(1.0 - v/20, 2)
     # for _ in range(5):
-    program = Program(min_length=1, max_length=2)
+    program = Program(min_length=1, max_length=7)
     res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
                                    threads=1)
     writer.write_results(res, vis)
