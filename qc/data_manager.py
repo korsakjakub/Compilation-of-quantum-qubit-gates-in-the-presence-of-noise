@@ -6,14 +6,11 @@ from datetime import datetime
 
 import numpy as np
 from matplotlib import pyplot as plt
-from tqdm import tqdm
+from qworder.word_generator import WordGenerator
 
 from qc.bloch_matrix import BlochMatrix, get_bloch_vectors
 from qc.config import Config as cf
 from qc.gates import Gate
-from qworder.word_generator import WordGenerator
-from qworder.cascading_rules import Cascader
-from qworder.rules import Word, Rules
 
 
 class DataManager:
@@ -87,10 +84,6 @@ class StatesManager(object):
 
     def _write_states(self, type: str) -> np.ndarray:
         words = self.wg.generate_words()
-        c = Cascader()
-        for i in tqdm(range(len(words))):
-            words[i] = c.cascade_word(Word(words[i], True)).word
-        words = np.unique(words)
         if type == "v":
             mat = self.bloch.get_bloch_matrices(words)
             vectors = get_bloch_vectors(mat)

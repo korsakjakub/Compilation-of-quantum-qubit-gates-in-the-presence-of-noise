@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 import picos as pc
 from numpy import random
 from picos import Problem
+from qworder.cascading_rules import Cascader
 
 from qc.bloch_matrix import *
 from qc.data_manager import DataManager, StatesManager, remove_far_points
@@ -158,9 +159,10 @@ class Program:
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             v = []
+            start = timer()
             # for each length generate input vectors - independent of target for now
             for length in tqdm(range(self.min_length, self.max_length)):
-                wg = WordGenerator(gates, length)
+                wg = WordGenerator(gates, length, cascader=Cascader())
                 sm = StatesManager(bloch=bloch, gate=gate, wg=wg)
                 if program == "lp":
                     v.append(sm.get_vectors())
@@ -169,6 +171,8 @@ class Program:
                 elif program == "lp_channels":
                     v.append(sm.get_bloch_matrices())
 
+            end = timer()
+            print(f'czas: {end - start} s')
             return []
             results = []
             seed = random.randint(1, 1000000)
@@ -209,7 +213,7 @@ if __name__ == "__main__":
     vis = 1.0 # round(1.0 - v/20, 2)
     #for i in tqdm(range(30)):
         # print(str(i) + "-th iteration over " + str(vis))
-    program = Program(min_length=7, max_length=8)
+    program = Program(min_length=8, max_length=9)
     res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
                                    threads=1)
     writer.write_results(res, vis)
