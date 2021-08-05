@@ -84,6 +84,7 @@ class StatesManager(object):
 
     def _write_states(self, type: str) -> np.ndarray:
         words = self.wg.generate_words()
+        self.wg.cascader.rules.write_rules()
         if type == "v":
             mat = self.bloch.get_bloch_matrices(words)
             vectors = get_bloch_vectors(mat)
