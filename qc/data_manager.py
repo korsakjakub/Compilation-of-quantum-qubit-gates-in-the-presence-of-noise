@@ -28,7 +28,7 @@ class DataManager:
         plt.title('t(L)')
         plt.savefig(self.fig_dir + now.strftime("%d-%m-%Y-%H%M%S") + ".png")
 
-    def write_results(self, results: list, vis: float) -> None:
+    def write_results(self, results: list, vis: float, program: str) -> None:
         t = []
         n0 = []
         ll = []
@@ -40,7 +40,7 @@ class DataManager:
         tt = np.transpose(t)
         dd = np.transpose(d)
         for i in range(len(ll[0])):
-            output_file = open(self.dir + str(ll[0][i]) + "V" + str(vis), "a")
+            output_file = open(self.dir + str(ll[0][i]) + "V" + str(vis) + "P" + program, "a")
             for j in range(len(tt[i])):
                 output_file.write(str(tt[i][j]) + "\t" + str(dd[i][j]) + "\n")
             output_file.close()
@@ -62,7 +62,7 @@ class DataManager:
 
 
 def remove_far_points(points, target, out_length: int = 500):
-    if points[0].shape == (3, 1):  # euclidean norm
+    if points[0].shape == (3,):  # euclidean norm
         return sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
     elif points[0].shape == (3, 3):  # operator norm
         return sorted(points, key=lambda vector: np.linalg.norm(vector - target.rot, ord=np.inf))[0:out_length]
@@ -107,7 +107,11 @@ class StatesManager(object):
     def get_vectors(self) -> StatesManager:
         if os.path.isfile(self.path):
             data = np.load(self.path)
-            self._states = np.array(data)
+            t = []
+            for d in data:
+                t.append(np.array(d).dot([1, 0, 0]))
+            self._states = np.array(t)
+
         else:
             self._states = self._write_states("v")
         return self
