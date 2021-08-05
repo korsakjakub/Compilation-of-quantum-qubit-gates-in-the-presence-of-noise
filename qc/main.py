@@ -67,6 +67,7 @@ class Program:
     def perform_lp(self, v, n0):
         output_t = []
         output_length = []
+        output_dist = []
 
         for length in tqdm(range(self.min_length, self.max_length)):
 
@@ -93,9 +94,58 @@ class Program:
 
             problem.set_objective("max", t)
             problem.solve(solver='cvxopt')
+            print(problem)
             output_t.append(float(t))
             output_length.append(length)
-        return [output_length, output_t, n0]
+            out_vec = sum([float(p[i]) * vec[i] for i in range(n)])
+            output_dist.append(np.linalg.norm(out_vec - n0, ord=2))
+        return [output_length, output_t, n0, output_dist]
+
+    def perform_lp2(self, v, n0):
+        output_t = []
+        output_length = []
+        output_dist = []
+
+        for length in tqdm(range(self.min_length, self.max_length)):
+
+            problem = Problem()
+            index = length - self.min_length
+            p = {}
+            q = {}
+            # take only a specified number of input vectors
+            vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)]),
+                                                   target=n0, out_length=2000)
+            n = len(vec)
+            m = len(v[0].states)
+
+            # dodaję zmienne
+            for i in range(n):
+                p[i] = pc.RealVariable('p[{0}]'.format(i))
+
+            for i in range(m):
+                q[i] = pc.RealVariable('q[{0}]'.format(i))
+
+            t = pc.RealVariable('t')
+
+            # każde p >= 0
+            problem.add_list_of_constraints([p[i] >= 0 for i in range(n)])
+            problem.add_list_of_constraints([q[i] >= 0 for i in range(m)])
+            # p sumują się do 1
+            problem.add_constraint(1 == pc.sum([p[i] for i in range(n)]))
+            problem.add_constraint(1 - t == pc.sum([q[i] for i in range(m)]))
+            # wiąz na wektory
+            problem.add_constraint(t * n0[0] + pc.sum([q[j] * v[0].states[j][0] for j in range(m)]) == pc.sum([p[j] * vec[j][0] for j in range(n)]))
+            problem.add_constraint(t * n0[1] + pc.sum([q[j] * v[0].states[j][1] for j in range(m)]) == pc.sum([p[j] * vec[j][1] for j in range(n)]))
+            problem.add_constraint(t * n0[2] + pc.sum([q[j] * v[0].states[j][2] for j in range(m)]) == pc.sum([p[j] * vec[j][2] for j in range(n)]))
+
+            problem.set_objective("max", t)
+            problem.solve(solver='cvxopt')
+            print(problem)
+            output_t.append(float(t))
+            output_length.append(length)
+            out_vec = sum([float(p[i]) * vec[i] for i in range(n)])
+            output_dist.append(np.linalg.norm(out_vec - n0, ord=2))
+        return [output_length, output_t, n0, output_dist]
 
     def perform_lp_channels(self, v, n0):
         output_t = []
@@ -137,6 +187,7 @@ class Program:
 
             problem.set_objective("max", t)
             problem.solve(solver='cvxopt')
+            print(problem)
             output_t.append(float(t))
             output_length.append(length)
 
@@ -166,6 +217,8 @@ class Program:
                 sm = StatesManager(bloch=bloch, gate=gate, wg=wg)
                 if program == "lp":
                     v.append(sm.get_vectors())
+                if program == "lp2":
+                    v.append(sm.get_vectors())
                 elif program == "sdp":
                     v.append(sm.get_states())
                 elif program == "lp_channels":
@@ -173,18 +226,20 @@ class Program:
 
             end = timer()
             print(f'czas: {end - start} s')
-            return []
             results = []
             seed = random.randint(1, 1000000)
             # Generate target states for each thread
-            if program == "lp":
+            if program == "lp" or program == "lp2":
                 for _ in range(threads):
                     sleep(0.005)
                     seed += 1
                     random.seed(seed)
                     rn0 = np.random.default_rng().normal(size=3)
                     target = rn0 / np.linalg.norm(rn0)
-                    results.append(executor.submit(self.perform_lp, v, target))
+                    if program == "lp":
+                        results.append(executor.submit(self.perform_lp, v, target))
+                    else:
+                        results.append(executor.submit(self.perform_lp2, v, target))
             elif program == "sdp":
                 results = [executor.submit(self.perform_sdp, v) for _ in range(threads)]
             elif program == "lp_channels":
@@ -208,15 +263,16 @@ if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
     start = timer()
+    program_name = "lp2"
 
     # for v in tqdm(range(10)):
     vis = 1.0 # round(1.0 - v/20, 2)
     #for i in tqdm(range(30)):
         # print(str(i) + "-th iteration over " + str(vis))
-    program = Program(min_length=8, max_length=9)
-    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program="lp_channels",
+    program = Program(min_length=1, max_length=3)
+    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program=program_name,
                                    threads=1)
-    writer.write_results(res, vis)
+    writer.write_results(res, vis, program_name)
     end = timer()
     print(f'czas: {end - start} s')
     # writer.file_to_png()
