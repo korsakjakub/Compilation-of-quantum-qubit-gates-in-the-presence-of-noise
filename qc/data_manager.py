@@ -105,7 +105,7 @@ class StatesManager(object):
             np.save(self.path, states)
             return np.array(states)
 
-    def get_vectors(self) -> StatesManager:
+    def get_vectors(self) -> np.ndarray:
         if os.path.isfile(self.path):
             data = np.load(self.path)
             t = []
@@ -115,9 +115,9 @@ class StatesManager(object):
 
         else:
             self._states = self._write_states("v")
-        return self
+        return self._states
 
-    def get_states(self) -> StatesManager:
+    def get_states(self) -> np.ndarray:
         if os.path.isfile(self.path):
             matrices = []
             with open(self.path) as csv_file:
@@ -127,24 +127,24 @@ class StatesManager(object):
                 self._states = self.bloch.add_noise(np.array(matrices), self.wg.length)
         else:
             self._states = self.bloch.add_noise(self._write_states("s"), self.wg.length)
-        return self
+        return self._states
 
-    def get_matrices(self) -> StatesManager:
+    def get_matrices(self) -> np.ndarray:
         if os.path.isfile(self.path):
             self._states = np.load(self.path)
         else:
             self._states = self._write_states("m")
-        return self
+        return self._states
 
-    def get_bloch_matrices(self) -> StatesManager:
+    def get_bloch_matrices(self) -> np.ndarray:
         if os.path.isfile(self.path):
             self._states = self.bloch.add_noise(np.load(self.path), self.wg.length)
         else:
             self._states = self.bloch.add_noise(self._write_states("b"), self.wg.length)
-        return self
+        return self._states
 
 
 if __name__ == "__main__":
     sm = StatesManager(bloch=BlochMatrix(), wg=WordGenerator(['H', 'T', 'R'], 2), gate=Gate())
     v = sm.get_matrices()
-    print(v.states)
+    print(v)

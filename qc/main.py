@@ -75,7 +75,7 @@ class Program:
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(v[index].states, target=n0, out_length=2000)
+            vec = remove_far_points(v[index], target=n0, out_length=2000)
             n = len(vec)
 
             # dodaję zmienne
@@ -113,7 +113,7 @@ class Program:
             p = {}
             q = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)]),
+            vec = remove_far_points(np.concatenate([v[i] for i in range(index, length)]),
                                                    target=n0, out_length=2000)
             n = len(vec)
             m = len(v[0].states)
@@ -159,7 +159,7 @@ class Program:
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(np.concatenate([v[i].states for i in range(index, length)], axis=0),
+            vec = remove_far_points(np.concatenate([v[i] for i in range(index, length)], axis=0),
                                     target=n0, out_length=200)
             #vec = np.concatenate([v[i].states for i in range(index, length)], axis=0)
             # vec = remove_far_points(v[index].states, target=n0, out_length=2000)
