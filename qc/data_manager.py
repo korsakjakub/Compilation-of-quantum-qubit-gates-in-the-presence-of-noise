@@ -129,7 +129,6 @@ class StatesManager(object):
         for d in data:
             t.append(np.array(d).dot([1, 0, 0]))
         self._states = np.array(t)
-
         return self._states
 
     def get_states(self) -> np.ndarray:

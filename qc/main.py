@@ -45,6 +45,7 @@ class Program:
             problem.set_objective("max", visibility)
             # print(problem)
             problem.solve(solver='cvxopt')
+    
             probabilities_values = [float(prob.value) for prob in probabilities]
             maximal_visibility = visibility.value.real
             state_solution = np.array(rho.value_as_matrix) / maximal_visibility
@@ -72,12 +73,15 @@ class Program:
         output_mix = []  # compatibility
 
         for length in tqdm(range(self.min_length, self.max_length)):
+        #for length in tqdm(range(self.max_length - 1, self.max_length)):
 
             problem = Problem()
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(v[index], target=n0, out_length=2000)
+            #vec = remove_far_points(np.concatenate([v[i] for i in range(index, length)]),
+                                    #target=n0, out_length=2000)
+            vec = np.concatenate([v[i] for i in range(index, length)])
             n = len(vec)
 
             # dodaję zmienne
@@ -112,7 +116,8 @@ class Program:
         output_vector = []
         output_mix = []
 
-        for length in tqdm(range(self.min_length, self.max_length)):
+        #for length in tqdm(range(self.min_length, self.max_length)):
+        for length in tqdm(range(self.max_length - 1, self.max_length)):
 
             problem = Problem()
             index = length - self.min_length
@@ -174,6 +179,7 @@ class Program:
         target = n0
 
         for length in tqdm(range(self.min_length, self.max_length)):
+        #for length in tqdm(range(self.max_length - 1, self.max_length)):
 
             problem = Problem()
             index = length - self.min_length
