@@ -33,16 +33,26 @@ class DataManager:
         n0 = []
         ll = []
         d = []
+        mix = []
+        vec = []
         for result in results:
             ll.append(result[0])
             t.append(result[1])
+            n0.append(result[2])
             d.append(result[3])
+            mix.append(result[4])
+            vec.append(result[5])
         tt = np.transpose(t)
         dd = np.transpose(d)
+
         for i in range(len(ll[0])):
-            output_file = open(self.dir + str(ll[0][i]) + "V" + str(vis) + "P" + program, "a")
+            output_file = open(self.dir + program + "/" + str(ll[0][i]) + "V" + str(vis), "a")
             for j in range(len(tt[i])):
-                output_file.write(str(tt[i][j]) + "\t" + str(dd[i][j]) + "\n")
+                res_data = [str(tt[i][j]), str(dd[i][j]), str(n0[0].tolist()), str(mix[0][0].tolist()),
+                            str(vec[0][0].tolist())]
+                print(res_data)
+                print('\t'.join(res_data))
+                output_file.write('\t'.join(res_data) + '\n')
             output_file.close()
 
     def file_to_png(self) -> None:
@@ -63,9 +73,13 @@ class DataManager:
 
 def remove_far_points(points, target, out_length: int = 500):
     if points[0].shape == (3,):  # euclidean norm
-        return sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
+        output = sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
+        output.append(np.array([0, 0, 0]))
+        return output
     elif points[0].shape == (3, 3):  # operator norm
-        return sorted(points, key=lambda vector: np.linalg.norm(vector - target.rot, ord=np.inf))[0:out_length]
+        output = sorted(points, key=lambda vector: np.linalg.norm(vector - target.rot, ord=np.inf))[0:out_length]
+        output.append(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]]))
+    return output
 
 
 class StatesManager(object):
@@ -75,7 +89,7 @@ class StatesManager(object):
         self.gate = gate
         self.wg = wg
         self.path = cf.WORDS_DIR + "L" + str(wg.length) \
-            + "".join(wg.input_set) + ".npy"
+                    + "".join(wg.input_set) + ".npy"
         self._states: list = []
 
     @property
@@ -107,14 +121,15 @@ class StatesManager(object):
 
     def get_vectors(self) -> np.ndarray:
         if os.path.isfile(self.path):
-            data = np.load(self.path)
-            t = []
-            for d in data:
-                t.append(np.array(d).dot([1, 0, 0]))
-            self._states = np.array(t)
-
+            data = self.bloch.add_noise(np.load(self.path), length=self.wg.length)
         else:
-            self._states = self._write_states("v")
+            data = self.bloch.add_noise(self._write_states("b"), length=self.wg.length)
+
+        t = []
+        for d in data:
+            t.append(np.array(d).dot([1, 0, 0]))
+        self._states = np.array(t)
+
         return self._states
 
     def get_states(self) -> np.ndarray:
