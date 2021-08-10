@@ -43,8 +43,8 @@ class Program:
                 rho + (1 - visibility) * maximally_mixed_state == pc.sum(
                     [probabilities[i] * quantum_states[i] for i in range(number_of_states - 1)]))
             problem.set_objective("max", visibility)
-            print(problem)
-            problem.solve(solver='cvxopt')
+            #print(problem)
+            problem.solve(solver='mosek')
             probabilities_values = [float(prob.value) for prob in probabilities]
             maximal_visibility = visibility.value.real
             state_solution = np.array(rho.value_as_matrix) / maximal_visibility
@@ -70,12 +70,15 @@ class Program:
         output_dist = []
 
         for length in tqdm(range(self.min_length, self.max_length)):
+        #for length in tqdm(range(self.max_length - 1, self.max_length)):
 
             problem = Problem()
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(v[index], target=n0, out_length=2000)
+            #vec = remove_far_points(np.concatenate([v[i] for i in range(index, length)]),
+                                    #target=n0, out_length=2000)
+            vec = np.concatenate([v[i] for i in range(index, length)])
             n = len(vec)
 
             # dodaję zmienne
@@ -93,8 +96,8 @@ class Program:
             problem.add_constraint(t * n0[2] == pc.sum([p[j] * vec[j][2] for j in range(n)]))
 
             problem.set_objective("max", t)
-            problem.solve(solver='cvxopt')
-            print(problem)
+            problem.solve(solver='mosek')
+            #print(problem)
             output_t.append(float(t))
             output_length.append(length)
             out_vec = sum([float(p[i]) * vec[i] for i in range(n)])
@@ -106,7 +109,8 @@ class Program:
         output_length = []
         output_dist = []
 
-        for length in tqdm(range(self.min_length, self.max_length)):
+        #for length in tqdm(range(self.min_length, self.max_length)):
+        for length in tqdm(range(self.max_length - 1, self.max_length)):
 
             problem = Problem()
             index = length - self.min_length
@@ -116,7 +120,7 @@ class Program:
             vec = remove_far_points(np.concatenate([v[i] for i in range(index, length)]),
                                                    target=n0, out_length=2000)
             n = len(vec)
-            m = len(v[0].states)
+            m = len(v[0])
 
             # dodaję zmienne
             for i in range(n):
@@ -134,13 +138,13 @@ class Program:
             problem.add_constraint(1 == pc.sum([p[i] for i in range(n)]))
             problem.add_constraint(1 - t == pc.sum([q[i] for i in range(m)]))
             # wiąz na wektory
-            problem.add_constraint(t * n0[0] + pc.sum([q[j] * v[0].states[j][0] for j in range(m)]) == pc.sum([p[j] * vec[j][0] for j in range(n)]))
-            problem.add_constraint(t * n0[1] + pc.sum([q[j] * v[0].states[j][1] for j in range(m)]) == pc.sum([p[j] * vec[j][1] for j in range(n)]))
-            problem.add_constraint(t * n0[2] + pc.sum([q[j] * v[0].states[j][2] for j in range(m)]) == pc.sum([p[j] * vec[j][2] for j in range(n)]))
+            problem.add_constraint(t * n0[0] + pc.sum([q[j] * v[0][j][0] for j in range(m)]) == pc.sum([p[j] * vec[j][0] for j in range(n)]))
+            problem.add_constraint(t * n0[1] + pc.sum([q[j] * v[0][j][1] for j in range(m)]) == pc.sum([p[j] * vec[j][1] for j in range(n)]))
+            problem.add_constraint(t * n0[2] + pc.sum([q[j] * v[0][j][2] for j in range(m)]) == pc.sum([p[j] * vec[j][2] for j in range(n)]))
 
             problem.set_objective("max", t)
             problem.solve(solver='cvxopt')
-            print(problem)
+            #print(problem)
             output_t.append(float(t))
             output_length.append(length)
             out_vec = sum([float(p[i]) * vec[i] for i in range(n)])
@@ -154,14 +158,15 @@ class Program:
         target = n0
 
         for length in tqdm(range(self.min_length, self.max_length)):
+        #for length in tqdm(range(self.max_length - 1, self.max_length)):
 
             problem = Problem()
             index = length - self.min_length
             p = {}
             # take only a specified number of input vectors
-            vec = remove_far_points(np.concatenate([v[i] for i in range(index, length)], axis=0),
-                                    target=n0, out_length=200)
-            #vec = np.concatenate([v[i].states for i in range(index, length)], axis=0)
+            #vec = remove_far_points(np.concatenate([v[i] for i in range(index, length)], axis=0),
+                                    #target=n0, out_length=350)
+            vec = np.concatenate([v[i] for i in range(index, length)], axis=0)
             # vec = remove_far_points(v[index].states, target=n0, out_length=2000)
             n = len(vec)
 
@@ -186,22 +191,24 @@ class Program:
             problem.add_constraint(t * target.rot[2][2] == pc.sum([p[j] * vec[j][2][2] for j in range(n)]))
 
             problem.set_objective("max", t)
-            problem.solve(solver='cvxopt')
-            print(problem)
+            problem.solve(solver='mosek')
+            # print(problem)
             output_t.append(float(t))
             output_length.append(length)
 
         #   print("\nprobs: ")
         #   print([float(p[i]) for i in range(len(p))])
         #   print("\ntarget: ")
-        #   print(target.rot)
         #   print("\nout: ")
             out_rot = sum([float(p[i]) * vec[i] for i in range(n)])
-        #   print(out_rot)
+        #   num = np.sum([1 if p[i] >= 0.00001 else 0 for i in range(len(p))])
+        #   print("non-zero for l: " + str(length) + " is : " + str(num))
+        #   print("target: " + str(target.rot))
+        #   print("output: " + str(out_rot))
         #   print("output t: ")
         #   print(output_t)
         #   print("\ndistance: ")
-            dist = np.linalg.norm(out_rot - target.rot, ord=np.inf)
+            dist = np.linalg.norm(out_rot - target.rot, ord=2)
             output_dist.append(dist)
         #   print(dist)
         return [output_length, output_t, n0, output_dist]
@@ -263,16 +270,16 @@ if __name__ == "__main__":
     gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
     writer = DataManager()
     start = timer()
-    program_name = "lp2"
+    program_name = "lp_channels"
 
-    # for v in tqdm(range(10)):
-    vis = 1.0 # round(1.0 - v/20, 2)
-    #for i in tqdm(range(30)):
-        # print(str(i) + "-th iteration over " + str(vis))
-    program = Program(min_length=1, max_length=3)
-    res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program=program_name,
-                                   threads=1)
-    writer.write_results(res, vis, program_name)
+    for v in tqdm(range(4)):
+        vis = round(0.99 - 0.01 * v, 2)
+        for i in tqdm(range(1)):
+            # print(str(i) + "-th iteration over " + str(vis))
+            program = Program(min_length=1, max_length=12)
+            res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis), program=program_name,
+                                           threads=12)
+            writer.write_results(res, vis, program_name)
     end = timer()
     print(f'czas: {end - start} s')
     # writer.file_to_png()
