@@ -5,6 +5,7 @@ from enum import Enum
 from typing import List
 
 import numpy as np
+import scipy.spatial.transform.rotation
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 
@@ -70,10 +71,8 @@ class BlochMatrix(object):
         return self
 
     def get_random(self, seed):
-        np.random.seed(seed)
-        rand_list = np.random.random_sample(size=4)
-        rand_list /= np.linalg.norm(rand_list)
-        return self.set_by_gate(rand_list)
+        self._rot = R.random().as_matrix()
+        return self
 
     def combine(self, word: List[str]):
         self._rot = np.identity(3)
@@ -83,7 +82,7 @@ class BlochMatrix(object):
 
     def add_noise(self, mat: np.ndarray, length: int) -> np.ndarray:
         for i in range(len(mat)):
-            mat[i] *= self.visibility**length
+            mat[i] *= self.visibility ** length
         return np.asarray(mat)
 
     # returns a list of 3x3 orthogonal matrices from a list of words
@@ -95,3 +94,8 @@ class BlochMatrix(object):
             matrices.append(g)
         matrices = np.unique(matrices, axis=0)
         return matrices
+
+
+if __name__ == "__main__":
+    b = BlochMatrix()
+    b.get_random(55)

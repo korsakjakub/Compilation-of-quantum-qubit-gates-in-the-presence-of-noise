@@ -40,7 +40,7 @@ class DataManager:
         tt = np.transpose(t)
         dd = np.transpose(d)
         for i in range(len(ll[0])):
-            output_file = open(self.dir + str(ll[0][i]) + "V" + str(vis) + "P" + program, "a")
+            output_file = open(self.dir + program + "/" + str(ll[0][i]) + "V" + str(vis), "a")
             for j in range(len(tt[i])):
                 output_file.write(str(tt[i][j]) + "\t" + str(dd[i][j]) + "\n")
             output_file.close()
@@ -107,14 +107,14 @@ class StatesManager(object):
 
     def get_vectors(self) -> np.ndarray:
         if os.path.isfile(self.path):
-            data = np.load(self.path)
+            data = self.bloch.add_noise(np.load(self.path), self.wg.length)
             t = []
             for d in data:
                 t.append(np.array(d).dot([1, 0, 0]))
             self._states = np.array(t)
 
         else:
-            self._states = self._write_states("v")
+            self._states = self.bloch.add_noise(self._write_states("v"), self.wg.length)
         return self._states
 
     def get_states(self) -> np.ndarray:
