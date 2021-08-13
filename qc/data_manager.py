@@ -29,31 +29,12 @@ class DataManager:
         plt.savefig(self.fig_dir + now.strftime("%d-%m-%Y-%H%M%S") + ".png")
 
     def write_results(self, results: list, vis: float, program: str) -> None:
-        t = []
-        n0 = []
-        ll = []
-        d = []
-        mix = []
-        vec = []
-        for result in results:
-            ll.append(result[0])
-            t.append(result[1])
-            n0.append(result[2])
-            d.append(result[3])
-            mix.append(result[4])
-            vec.append(result[5])
-        tt = np.transpose(t)
-        dd = np.transpose(d)
-
-        for i in range(len(ll[0])):
-            output_file = open(self.dir + program + "/" + str(ll[0][i]) + "V" + str(vis), "a")
-            for j in range(len(tt[i])):
-                res_data = [str(tt[i][j]), str(dd[i][j]), str(n0[0].tolist()), str(mix[0][0].tolist()),
-                            str(vec[0][0].tolist())]
-                print(res_data)
-                print('\t'.join(res_data))
-                output_file.write('\t'.join(res_data) + '\n')
-            output_file.close()
+        for t in results:
+            for r in t:
+                output_file = open(self.dir + program + "/" + str(r[0]) + "V" + str(vis), "a")
+                r = [str(r[i]) for i in range(len(r))]
+                output_file.write('\t'.join(r) + '\n')
+                output_file.close()
 
     def file_to_png(self) -> None:
         ll = []
