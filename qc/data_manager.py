@@ -73,11 +73,15 @@ class DataManager:
 
 def remove_far_points(points, target, out_length: int = 500):
     if points[0].shape == (3,):  # euclidean norm
-        output = sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length]
+        points = np.unique(points, axis=0)
+        output = sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length-1]
+        d = [np.linalg.norm(output[i] - target) for i in range(len(output))]
+        print(d)
         output.append(np.array([0, 0, 0]))
         return output
     elif points[0].shape == (3, 3):  # operator norm
-        output = sorted(points, key=lambda vector: np.linalg.norm(vector - target.rot, ord=np.inf))[0:out_length]
+        points = np.unique(points, axis=0)
+        output = sorted(points, key=lambda vector: np.linalg.norm(vector - target, ord=2))[0:out_length-1]
         output.append(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]]))
     return output
 

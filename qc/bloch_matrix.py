@@ -5,9 +5,7 @@ from enum import Enum
 from typing import List
 
 import numpy as np
-import scipy.spatial.transform.rotation
 from scipy.spatial.transform import Rotation as R
-from tqdm import tqdm
 
 
 class Axis(Enum):
@@ -28,6 +26,10 @@ def get_bloch_vectors(matrices, initial=np.array((0.0, 0.0, 1.0))) -> np.ndarray
     for i in range(len(matrices)):
         vectors[i] = np.dot(matrices[i], initial)
     return np.unique(vectors, axis=0)
+
+
+def get_random():
+    return R.random().as_matrix()
 
 
 class BlochMatrix(object):
@@ -70,9 +72,6 @@ class BlochMatrix(object):
                               (2 * (b * d - a * c), - 2 * (b * c + a * d), a ** 2 + b ** 2 - c ** 2 - d ** 2)))
         return self
 
-    def get_random(self, seed):
-        self._rot = R.random().as_matrix()
-        return self
 
     def combine(self, word: List[str]):
         self._rot = np.identity(3)
@@ -89,7 +88,7 @@ class BlochMatrix(object):
     def get_bloch_matrices(self, words) -> np.ndarray:
         matrices = []
         print("Generating matrices")
-        for i in tqdm(range(len(words))):
+        for i in range(len(words)):
             g = self.combine(words[i]).rot
             matrices.append(g)
         matrices = np.unique(matrices, axis=0)
