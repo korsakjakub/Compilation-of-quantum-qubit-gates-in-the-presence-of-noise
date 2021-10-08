@@ -47,9 +47,10 @@ class BlochMatrix(object):
         )
     }
 
-    def __init__(self, vis: float = 1.0):
+    def __init__(self, noise, vis: float = 1.0):
         self._rot = np.empty(shape=(3, 3))
         self.visibility = vis
+        self.noise_type = noise
 
     @property
     def rot(self) -> np.array:
@@ -72,7 +73,6 @@ class BlochMatrix(object):
                               (2 * (b * d - a * c), - 2 * (b * c + a * d), a ** 2 + b ** 2 - c ** 2 - d ** 2)))
         return self
 
-
     def combine(self, word: List[str]):
         self._rot = np.identity(3)
         for g in word:
@@ -80,8 +80,18 @@ class BlochMatrix(object):
         return self
 
     def add_noise(self, mat: np.ndarray, length: int) -> np.ndarray:
+        if self.noise_type == "depolarizing":
+            M = np.eye(3) * self.visibility ** length
+        elif self.noise_type == "pauli_x":
+            M = np.array([[1, 0, 0], [0, 2 * self.visibility - 1, 0], [0, 0, 2 * self.visibility - 1]], dtype=float) ** length
+        elif self.noise_type == "pauli_y":
+            M = np.array([[2 * self.visibility - 1, 0, 0], [0, 1, 0], [0, 0, 2 * self.visibility - 1]], dtype=float) ** length
+        elif self.noise_type == "pauli_z":
+            M = np.array([[2 * self.visibility - 1, 0, 0], [0, 2 * self.visibility - 1, 0], [0, 0, 1]], dtype=float) ** length
+        else:
+            M = np.eye(3)
         for i in range(len(mat)):
-            mat[i] *= self.visibility ** length
+            mat[i] = np.matmul(M, mat[i])
         return np.asarray(mat)
 
     # returns a list of 3x3 orthogonal matrices from a list of words
@@ -96,5 +106,7 @@ class BlochMatrix(object):
 
 
 if __name__ == "__main__":
-    b = BlochMatrix()
-    b.get_random(55)
+    b = BlochMatrix(vis=0.9, noise="pauli_x")
+    v = b.get_bloch_matrices(["I"])
+    b.add_noise(mat=np.array([[[1,0,0],[0,1,0],[0,0,1]]],dtype=float), length=1)
+    pass

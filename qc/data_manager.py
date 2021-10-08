@@ -57,7 +57,7 @@ def remove_far_points(points, target, out_length: int = 500):
         points = np.unique(points, axis=0)
         output = sorted(points, key=lambda vector: np.linalg.norm(vector - target))[0:out_length-1]
         d = [np.linalg.norm(output[i] - target) for i in range(len(output))]
-        print(d)
+        #print(d)
         output.append(np.array([0, 0, 0]))
         return output
     elif points[0].shape == (3, 3):  # operator norm
@@ -109,7 +109,6 @@ class StatesManager(object):
             data = self.bloch.add_noise(np.load(self.path), length=self.wg.length)
         else:
             data = self.bloch.add_noise(self._write_states("b"), length=self.wg.length)
-
         t = []
         for d in data:
             t.append(np.array(d).dot([1, 0, 0]))

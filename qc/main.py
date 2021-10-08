@@ -17,10 +17,11 @@ from qc.gates import Gate
 
 class Program:
 
-    def __init__(self, min_length: int = 3, max_length: int = 4, targets: np.ndarray = np.array([])):
+    def __init__(self, min_length: int = 3, max_length: int = 4, targets: np.ndarray = np.array([]), noise_type =""):
         self.min_length = min_length
         self.max_length = max_length
         self.targets = targets
+        self.noise_type = noise_type
 
     def perform_sdp(self, inputs):
         output_a = []
@@ -73,11 +74,18 @@ class Program:
         outs = []
         previous_out = []
 
+        # target = np.array([-0.5578337547883747, -0.6983624372220631, 0.4484544662459758])
+
         for length in range(self.min_length, self.max_length):
             index = length - self.min_length
             v = np.concatenate([input[i] for i in range(index + 1)])
             hull = scipy.spatial.ConvexHull(v)
-            print(hull.volume)
+            vertices = hull.vertices
+            points = []
+            for vert in vertices:
+                points.append(v[vert].tolist())
+            print(hull.vertices)
+            print(points)
             v = remove_far_points(np.concatenate([input[i] for i in range(index + 1)]),
                                   target=target, out_length=100)
             n = len(v)
@@ -100,9 +108,18 @@ class Program:
             problem1.add_constraint(t1 * target[2] == pc.sum([p[j] * v[j][2] for j in range(n)]))
 
             problem1.set_objective("max", t1)
-            problem1.solve(solver='cvxopt')
+            problem1.solve(solver='mosek')
 
+#           print(problem1)
+#           print("Target:")
+#           print(target)
+#           print("Weights:")
+#           print([float(p[i]) for i in range(n)])
+#           print("Input vectors:")
+#           print(v)
             output1 = sum([float(p[i]) * v[i] for i in range(n)])
+#           print("Output vector:")
+#           print(output1)
             d1 = np.linalg.norm(output1 - target, ord=2)
 
             # LP2
@@ -111,7 +128,7 @@ class Program:
             problem2 = Problem()
 
             for i in range(n):
-                r[i] = pc.RealVariable('p[{0}]'.format(i))
+                r[i] = pc.RealVariable('r[{0}]'.format(i))
 
             for i in range(n):
                 q[i] = pc.RealVariable('q[{0}]'.format(i))
@@ -133,9 +150,19 @@ class Program:
                 [r[j] * v[j][2] for j in range(n)]))
 
             problem2.set_objective("max", t2)
-            problem2.solve(solver='cvxopt')
-
+            problem2.solve(solver='mosek')
+#           print(problem2)
+#           print("Target:")
+#           print(target)
+#           print("Weights r:")
+#           print([float(r[i]) for i in range(n)])
+#           print("Weights q:")
+#           print([float(q[i]) for i in range(n)])
+#           print("Input vector:")
+#           print(v)
             output2 = sum([float(r[i]) * v[i] for i in range(n)])
+#           print("Output vector:")
+#           print(output2)
             mix2 = sum([float(q[i]) * v[i] for i in range(n)])
             d2 = np.linalg.norm(output2 - target, ord=2)
 
@@ -146,8 +173,8 @@ class Program:
             eps = 10e-5
             out = [length, target.tolist(), float(t1), d1, output1.tolist(), float(t2), d2, output2.tolist(),
                    mix2.tolist(), d3, output3.tolist(), hull.volume]
-            print(str([length, float(t2), float(t1)]))
-            print(str([length, d2, d1, d3]))
+#           print(str([length, float(t1), float(t2)]))
+#           print(str([length, d1, d2, d3]))
             if not previous_out:
                 outs.append(copy.deepcopy(out))
                 previous_out = copy.deepcopy(out)
@@ -183,7 +210,7 @@ class Program:
         for length in range(self.min_length, self.max_length):
             index = length - self.min_length
             v = remove_far_points(np.concatenate([input[i] for i in range(index + 1)]),
-                                  target=target, out_length=200)
+                                  target=target, out_length=100)
             n = len(v)
 
             # LP1
@@ -210,7 +237,7 @@ class Program:
             problem1.add_constraint(t1 * target[2][2] == pc.sum([p[j] * v[j][2][2] for j in range(n)]))
 
             problem1.set_objective("max", t1)
-            problem1.solve(solver='cvxopt')
+            problem1.solve(solver='mosek')
 
             output1 = sum([float(p[i]) * v[i] for i in range(n)])
             d1 = np.linalg.norm(output1 - target, ord=2)
@@ -255,7 +282,7 @@ class Program:
                 [r[j] * v[j][2][2] for j in range(n)]))
 
             problem2.set_objective("max", t2)
-            problem2.solve(solver='cvxopt')
+            problem2.solve(solver='mosek')
 
             output2 = sum([float(r[i]) * v[i] for i in range(n)])
             mix2 = sum([float(q[i]) * v[i] for i in range(n)])
@@ -265,19 +292,36 @@ class Program:
             output3 = sorted(v, key=lambda vector: np.linalg.norm(vector - target, ord=2))[0]
             d3 = np.linalg.norm(output3 - target, ord=2)
 
+            eps = 10e-5
+            out = [length, target.tolist(), float(t1), d1, output1.tolist(), float(t2), d2, output2.tolist(),
+                   mix2.tolist(), d3, output3.tolist()]
+            #print(str([length, float(t2), float(t1)]))
+            #print(str([length, d2, d1, d3]))
             if not previous_out:
-                outs.append([length, target, float(t1), d1, output1, float(t2), d2, output2, mix2, d3, output3])
-                previous_out = [length, target, float(t1), d1, output1, float(t2), d2, output2, mix2, d3, output3]
-            elif float(t1) >= previous_out[2] and float(t2) >= previous_out[5]:
-                outs.append([length, target, float(t1), d1, output1, float(t2), d2, output2, mix2, d3, output3])
-                previous_out = [length, target, float(t1), d1, output1, float(t2), d2, output2, mix2, d3, output3]
+                outs.append(copy.deepcopy(out))
+                previous_out = copy.deepcopy(out)
+                continue
+            if previous_out[3] - d1 >= eps and previous_out[2] - float(t1) <= -eps:
+                out1 = out[2:5]
+                previous_out[2:5] = out[2:5]
             else:
-                previous_out[0] += 1
                 temp_out = copy.deepcopy(previous_out)
-                outs.append(temp_out)
-
-            print(str([length, float(t2), float(t1)]))
-            print(str([length, d2, d1, d3]))
+                out1 = temp_out[2:5]
+            if previous_out[6] - d2 >= eps and previous_out[5] - float(t2) <= -eps:
+                out2 = out[5:9]
+                previous_out[5:9] = out[5:9]
+            else:
+                temp_out = copy.deepcopy(previous_out)
+                out2 = temp_out[5:9]
+            res_out = [length, target.tolist()]
+            for e in out1:
+                res_out.append(e)
+            for e in out2:
+                res_out.append(e)
+            for e in out[9:]:
+                res_out.append(e)
+            #outs.append([length, target.tolist(), out1[:], out2[:], out[9:]])
+            outs.append(res_out)
         return outs
 
     def threaded_program(self, gates: list, bloch: BlochMatrix, gate: Gate, program: str, threads: int = 2):
@@ -328,22 +372,25 @@ class Program:
 
 
 if __name__ == "__main__":
-    gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
-    writer = DataManager()
-    start = timer()
-    program_name = "states"
-    amount = 1
+    for _ in range(1):
+        gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
+        writer = DataManager()
+        start = timer()
+        program_name = "channels"
+        noise_type = "pauli_y"
+        amount = 14
 
-    program = Program(min_length=1, max_length=12)
-    targets = program.generate_target(program_name, amount)
+        program = Program(min_length=1, max_length=12)
+        targets = program.generate_target(program_name, amount)
 
-    program.targets = targets
-    for vv in tqdm(range(1)):
-        vis = round(0.99 - 0.01 * vv, 2)
-        res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis), gate=Gate(vis=vis),
-                                       program=program_name,
-                                       threads=amount)
-        writer.write_results(res, vis, program_name)
-    end = timer()
-    print(f'czas: {end - start} s')
+        program.targets = targets
+        program.noise_type = noise_type
+        for vv in tqdm(range(1000)):
+            vis = round(1.00 - 1e-4 * vv, 4)
+            res = program.threaded_program(gates=gates, bloch=BlochMatrix(vis=vis, noise=noise_type), gate=Gate(vis=vis),
+                                           program=program_name,
+                                           threads=amount)
+            writer.write_results(res, vis, program_name)
+        end = timer()
+        print(f'czas: {end - start} s')
     # writer.file_to_png()
