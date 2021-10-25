@@ -94,19 +94,21 @@ class BlochMatrix(object):
             mat[i] = np.matmul(M, mat[i])
         return np.asarray(mat)
 
-    # returns a list of 3x3 orthogonal matrices from a list of words
-    def get_bloch_matrices(self, words) -> np.ndarray:
-        matrices = []
-        print("Generating matrices")
+    # returns a list of 3x3 real matrices from a list of words
+    def get_bloch_matrices(self, words):
+        out = {}
+        mat = []
         for i in range(len(words)):
             g = self.combine(words[i]).rot
-            matrices.append(g)
-        matrices = np.unique(matrices, axis=0)
-        return matrices
+            mat.append(g)
+        matrices, indices = np.unique(mat, axis=0, return_index=True)
+        for i in range(len(matrices)):
+            out.update({words[indices[i]]: matrices[i]})
+        return out
 
 
 if __name__ == "__main__":
     b = BlochMatrix(vis=0.9, noise="pauli_x")
     v = b.get_bloch_matrices(["I"])
-    b.add_noise(mat=np.array([[[1,0,0],[0,1,0],[0,0,1]]],dtype=float), length=1)
+    b.add_noise(mat=np.array([[[1, 0, 0], [0, 1, 0], [0, 0, 1]]], dtype=float), length=1)
     pass

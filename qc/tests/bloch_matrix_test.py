@@ -1,5 +1,8 @@
 import unittest
 
+from qworder.cascading_rules import Cascader
+from qworder.word_generator import WordGenerator
+
 from qc.bloch_matrix import *
 
 
@@ -20,6 +23,14 @@ class BlochMatrixTest(unittest.TestCase):
         r = b.get_random()
         np.testing.assert_array_almost_equal(np.matmul(np.transpose(r.rot), r.rot), np.array(
             [[1, 0, 0], [0, 1, 0], [0, 0, 1]]))
+
+    def test_unique(self):
+        words = WordGenerator(['H', 'R', 'I', 'T', 'X', 'Y', 'Z'], 4, cascader=Cascader()).generate_words()
+        bloch = BlochMatrix(noise=1.0)
+        m = bloch.get_bloch_matrices(words)
+
+
+        bloch.unique(m)
 
 
 if __name__ == '__main__':
