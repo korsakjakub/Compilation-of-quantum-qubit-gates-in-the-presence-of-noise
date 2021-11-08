@@ -10,7 +10,7 @@ from qworder.word_generator import WordGenerator
 from scipy.spatial.transform import Rotation
 
 from qc.channel import Channel
-from qc.results import StatesManager
+from qc.results import Results
 
 
 class Program:
@@ -317,7 +317,7 @@ class Program:
                 if program == "states":
                     v.append(sm.get_vectors())
                 elif program == "channels":
-                    v.append(sm.get_channels())
+                    v.append(sm.channels_from_words())
 
             results = []
             # Generate target states for each thread
