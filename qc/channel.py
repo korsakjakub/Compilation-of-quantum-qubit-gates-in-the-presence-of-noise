@@ -7,19 +7,20 @@ from typing import List
 import numpy as np
 import picos as pc
 
-from qc.lp_input import WordDict
+import qc
 
 
 def affine_channel_norm(delta, c):
     problem = pc.Problem()
     v = pc.RealVariable('v', 3)
-    problem.add_constraint(pc.Norm(v) <= 1)
-    n = (delta * v + c)
-    problem.set_objective('max', n)
+    t = pc.RealVariable('t', 1)
+    problem.add_list_of_constraints(t <= pc.Norm(delta * v + c))
+    # problem.add_constraint(pc.Norm(delta * v + c) <= t)
+    # problem.set_objective('min', t)
+    problem.set_objective('max', t)
+    print(problem)
     solution = problem.solve(solver="cvxopt")
     print(solution.primals)
-
-    print(pc.Norm(delta @ v + c))
 
 
 class Noise(enum.Enum):
@@ -42,7 +43,7 @@ class Channel(object):
     def rot(self) -> np.array:
         return self._rot
 
-    def add_noise(self, input_channels: List[WordDict], length: int) -> List[WordDict]:
+    def add_noise(self, input_channels: List[qc.lp_input.WordDict], length: int) -> List[qc.lp_input.WordDict]:
         m = np.eye(3)
         if self.noise_type == Noise.Depolarizing:
             m = np.eye(3) * self.visibility ** length
@@ -58,12 +59,11 @@ class Channel(object):
         elif self.noise_type == Noise.Depolarizing:
             m = np.eye(3)
         for i in range(len(input_channels)):
-            input_channels[i] = np.matmul(m, input_channels[i])
+            input_channels[i]['m'] = np.matmul(m, input_channels[i]['m'])
         return input_channels
 
 
 if __name__ == "__main__":
     test_delta = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    test_c = np.array([1/math.sqrt(3), 1/math.sqrt(3), 1/math.sqrt(3)])
+    test_c = np.array([1 / math.sqrt(3), 1 / math.sqrt(3), 1 / math.sqrt(3)])
     affine_channel_norm(test_delta, test_c)
-    pass

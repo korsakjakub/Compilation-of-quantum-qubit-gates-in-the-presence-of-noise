@@ -10,7 +10,7 @@ import numpy as np
 from qworder.word_generator import WordGenerator
 
 from config import Config
-from qc.channel import Channel
+import qc
 
 
 class WordDict(Dict):
@@ -38,11 +38,15 @@ class ProgramInput:
     _matrix = np.eye(3)
     input: List[WordDict] = []
 
-    def __init__(self, channel: Channel, wg: WordGenerator) -> None:
-        self.path = Config.WORDS_DIR + "L" + str(wg.length) \
-                    + "".join(wg.input_set) + ".npy"
-        self.channel = channel
-        self.wg = wg
+    def __init__(self, wg: WordGenerator, length: int, channel: qc.channel.Channel = None, input_list: List[WordDict] = None) -> None:
+        self.path = Config.WORDS_DIR + "L" + str(length) \
+                    + ".npy"
+        if channel:
+            self.channel = channel
+        if wg:
+            self.wg = wg
+        if input_list:
+            self.input = input_list
 
     # Given a list of words,
     # it returns a dictionary,
@@ -62,19 +66,18 @@ class ProgramInput:
         return self.gates[name]
 
     def _combine(self, word: List[str]):
-        self._rot = np.identity(3)
         for g in word:
-            self._rot = np.matmul(self._rot, self._get_universal(g))
+            self._matrix = np.matmul(self._matrix, self._get_universal(g))
         return self
 
     def remove_far_points(self, target, out_length: int = 500):
-        if self.input[0]['m'].shape == (3,):  # euclidean norm
-            self.input = sorted(self.input, key=lambda vector: np.linalg.norm(vector['m'] - target))[0:out_length - 1]
+        if self.input[0][0]['m'].shape == (3,):  # euclidean norm
+            self.input = sorted(self.input[0], key=lambda vector: np.linalg.norm(vector['m'] - target))[0:out_length - 1]
             self.input.append(WordDict('I', np.zeros((3,), dtype=float)))
             return self
-        elif self.input[0]['m'].shape == (3, 3):  # operator norm
-            self.input = sorted(self.input, key=lambda vector: np.linalg.norm(vector['m'] - target, ord=2))[
-                     0:out_length - 1]
+        elif self.input[0][0]['m'].shape == (3, 3):  # operator norm
+            self.input = sorted(self.input[0], key=lambda vector: np.linalg.norm(vector['m'] - target, ord=2))[
+                         0:out_length - 1]
             self.input.append(WordDict('I', np.zeros((3, 3), dtype=float)))
         return self
 
@@ -99,7 +102,9 @@ class ProgramInput:
     def get_channels(self):
         if os.path.isfile(self.path):
             file = open(self.path, "rb")
-            self.input = self.channel.add_noise(pickle.load(file), self.wg.length)
+            data = pickle.load(file)
+            self.input = self.channel.add_noise(data, self.wg.length)
+            file.close()
         else:
             self.input = self.channel.add_noise(self._write_states().input, self.wg.length)
         return self
