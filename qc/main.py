@@ -14,12 +14,12 @@ if __name__ == "__main__":
         program_name = "channels"
         amount = 1
 
-        program = qc.linear_programs.Program(min_length=1, max_length=5, wg=WordGenerator(gates, length=0,
+        program = qc.linear_programs.Program(min_length=1, max_length=7, wg=WordGenerator(gates, length=0,
                                                                                           cascader=Cascader()))
         targets = qc.linear_programs.generate_target(program_name, amount)
 
         program.targets = targets
-        program.noise_type = qc.channel.Noise.PauliY
+        program.noise_type = qc.channel.Noise.Depolarizing
         for vv in tqdm(range(1)):
             vis = round(1.00 - 1e-4 * vv, 4)
             channel = qc.channel.Channel(vis=vis, noise=qc.channel.Noise.PauliY)

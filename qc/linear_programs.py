@@ -3,11 +3,12 @@ import scipy
 from numpy import copy
 from picos import Problem
 import picos as pc
-from qworder.word_generator import WordGenerator
 from scipy.spatial.transform import Rotation
 import concurrent.futures
-
+from itertools import chain
 import qc
+from qworder.word_generator import WordGenerator
+from qworder.cascading_rules import Cascader
 
 
 def generate_target(program, amount):
@@ -247,79 +248,57 @@ class Program:
 
     def perform_channels(self, inputs, target):
         outs = []
-        previous_out = []
-        print("test")
-        print(inputs)
+        v = p = q = r = None
 
         for length in range(self.min_length, self.max_length):
             index = length - self.min_length
-
-            v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=[inputs[i] for i in range(index + 1)]) \
+            # input_list = [inputs[i] for i in range(index + 1)]
+            # newlist = list(chain.from_iterable(newlist))
+            input_list = list(chain.from_iterable([inputs[i] for i in range(index + 1)]))
+            v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list) \
                 .remove_far_points(target=target, out_length=100)
-            # LP1
             t1, d1, output1, p = lp1_channels(v.input, target)
-            # LP2
-            t2, d2, output2, mix2, q, r = lp2_channels(v.input, target)
-            # BRUTE
-            d3, output3 = brute_channel(v.input, target)
+#           t2, d2, output2, mix2, q, r = lp2_channels(v.input, target)
+#           d3, output3 = brute_channel(v.input, target)
+#           out = [length, target.tolist(), float(t1), d1, output1, float(t2), d2, output2,
+#                  mix2.tolist(), d3, output3]
+#           outs.append(out)
+            print("distances: ", d1)
 
-            eps = 10e-5
-            out = [length, target.tolist(), float(t1), d1, output1, float(t2), d2, output2,
-                   mix2.tolist(), d3, output3]
+        v_input = v.input
+        for length in range(self.max_length, self.max_length + 10):
+            p = [float(p[i]) for i in range(len(p))]
+            vp = []
+            for i in range(len(p)):
+                if p[i] > 1e-5:
+                    vp.append(v_input[i]['w'])
+            new_words = self.wg.add_layer(vp)
+            cascader = Cascader()
+            for i in range(len(new_words)):
+                new_words[i] = cascader.cascade_word(new_words[i])
+            new_words = np.unique(new_words)
+            v = qc.lp_input.ProgramInput(wg=self.wg, length=length)
+            v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
 
-            if not previous_out:
-                outs.append(copy.deepcopy(out))
-                previous_out = copy.deepcopy(out)
-                continue
-            if previous_out[3] - d1 >= eps and previous_out[2] - float(t1) <= -eps:
-                out1 = out[2:5]
-                previous_out[2:5] = out[2:5]
-            else:
-                temp_out = copy.deepcopy(previous_out)
-                out1 = temp_out[2:5]
-            if previous_out[6] - d2 >= eps and previous_out[5] - float(t2) <= -eps:
-                out2 = out[5:9]
-                previous_out[5:9] = out[5:9]
-            else:
-                temp_out = copy.deepcopy(previous_out)
-                out2 = temp_out[5:9]
-            res_out = [length, target.tolist()]
-            for e in out1:
-                res_out.append(e)
-            for e in out2:
-                res_out.append(e)
-            for e in out[9:]:
-                res_out.append(e)
-            outs.append(res_out)
+            t1, d1, output1, p = lp1_channels(v_input, target)
+            print("distances: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
         return outs
 
     def threaded_program(self, channel: qc.channel.Channel, program: str, threads: int = 2):
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             v = []
-            # for each length generate input vectors - independent of target for now
             for length in range(self.min_length, self.max_length):
                 self.wg.length = length
                 lpinput = qc.lp_input.ProgramInput(channel=channel, wg=self.wg, length=length)
                 if program == "states":
                     v.append(lpinput.get_vectors())
                 elif program == "channels":
-                    v.append(lpinput.get_channels().input)
-
+                    v.append(lpinput.get_channels().input.copy())
             results = []
-            # Generate target states for each thread
             if program == "states":
                 for i in range(threads):
                     results.append(executor.submit(self.perform_states, v, self.targets[i]))
             elif program == "channels":
-                self.perform_channels(v, self.targets[0])
-                #for i in range(threads):
-                    #results.append(executor.submit(self.perform_channels))#, v, self.targets[i]))
-            else:
-                return None
-            for f in concurrent.futures.as_completed(results):
-                try:
-                    results.append(f.result())
-                except ValueError:
-                    print("cannot produce result")
-        return results[threads:]
+                results.append(self.perform_channels(v, self.targets[0]))
+            return results
