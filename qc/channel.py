@@ -56,7 +56,7 @@ class Channel(object):
         elif self.noise_type == Noise.PauliZ:
             m = np.array([[2 * self.visibility - 1, 0, 0], [0, 2 * self.visibility - 1, 0], [0, 0, 1]], dtype=float) \
                 ** length
-        elif self.noise_type == Noise.Depolarizing:
+        else:
             m = np.eye(3)
         for i in range(len(input_channels)):
             input_channels[i]['m'] = np.matmul(m, input_channels[i]['m'])

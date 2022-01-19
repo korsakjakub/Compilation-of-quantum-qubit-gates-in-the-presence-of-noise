@@ -250,6 +250,14 @@ class Program:
         outs = []
         v = p = q = r = None
 
+        target = np.array([[0.50607966,  0.26960331,  0.8192664], [-0.59451586,  0.79721188,  0.10490047], [-0.62484739, -0.54015486,  0.56373616]])
+
+        self.max_length -= 2
+
+        def random_inputs(length, amount: int = 100):
+            gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
+            return ["".join([gates[np.random.randint(0, 6)] for i in range(length)]) for _ in range(amount)]
+
         for length in range(self.min_length, self.max_length):
             index = length - self.min_length
             # input_list = [inputs[i] for i in range(index + 1)]
@@ -265,23 +273,31 @@ class Program:
 #           outs.append(out)
             print("distances: ", d1)
 
+# obcinać od czasu do czasu
+        print(len(p))
         v_input = v.input
         for length in range(self.max_length, self.max_length + 10):
             p = [float(p[i]) for i in range(len(p))]
             vp = []
+            q = []
             for i in range(len(p)):
                 if p[i] > 1e-5:
                     vp.append(v_input[i]['w'])
+                    q.append((p[i], vp[-1]))
+            q = sorted(q, key=lambda x: x[0], reverse=True)
+            print(q)
             new_words = self.wg.add_layer(vp)
             cascader = Cascader()
             for i in range(len(new_words)):
                 new_words[i] = cascader.cascade_word(new_words[i])
             new_words = np.unique(new_words)
             v = qc.lp_input.ProgramInput(wg=self.wg, length=length)
-            v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
+            #v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
+            v_input = v.channels_from_words(random_inputs(length, amount=len(q))).input
 
             t1, d1, output1, p = lp1_channels(v_input, target)
-            print("distances: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
+            print("distance: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
+            print(len(vp))
         return outs
 
     def threaded_program(self, channel: qc.channel.Channel, program: str, threads: int = 2):
