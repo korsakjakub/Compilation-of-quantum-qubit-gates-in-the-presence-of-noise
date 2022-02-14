@@ -31,6 +31,7 @@ class ProgramInput:
         'X': np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),
         'Y': np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),
         'Z': np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),
+        'S': np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]),
         'T': np.array(
             [[np.cos(np.pi / 4), -np.sin(np.pi / 4), 0], [np.sin(np.pi / 4), np.cos(np.pi / 4), 0], [0, 0, 1]]),
         'R': np.array(
@@ -95,7 +96,8 @@ class ProgramInput:
         elif self.input[0]['m'].shape == (3, 3):  # operator norm
             self.input = sorted(self.input, key=lambda vector: np.linalg.norm(vector['m'] - target, ord=2))[
                          0:out_length - 1]
-            if not ['I' == el['w'] for el in self.input]:
+            identity_check = any(['I' == el['w'] for el in self.input])
+            if not identity_check:
                 self.input.append(WordDict(w='I', m=np.zeros((3, 3), dtype=float)))
         return self
 
