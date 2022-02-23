@@ -261,12 +261,39 @@ class Program:
 
         target = np.array([[0.50607966,  0.26960331,  0.8192664], [-0.59451586,  0.79721188,  0.10490047], [-0.62484739, -0.54015486,  0.56373616]])
 
+        def leave_only_best(p, v_input):
+            new_words = []
+            q = []
+            for i in range(len(p)):
+                if p[i] > 1e-5:
+                    new_words.append(v_input[i]['w'])
+                    q.append((p[i], new_words[-1]))
+            q = sorted(q, key=lambda x: x[0], reverse=True)
+            return (new_words, q)
+
         def random_inputs(length, amount: int = 100):
             gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
             cascader = Cascader()
             out = [cascader.cascade_word("".join([gates[np.random.randint(0, 6)] for _ in range(length)])) for _ in range(amount)]
             out.append('I')
             return out
+
+        def cascade_list(words):
+            cascader = Cascader()
+            for i in range(len(words)):
+                words[i] = cascader.cascade_word(words[i])
+            return np.unique(words)
+
+        def perform_n(new_words, number=5):
+            for length in range(self.max_length, self.max_length + number):
+                start_time_loop = time.perf_counter()
+                new_words = cascade_list(self.wg.add_layer(new_words))
+                v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
+                t1, d1, output1, p = lp1_channels(v_input, target)
+                print("distance: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
+                end_time_loop = time.perf_counter()
+                print(f"Execution Time (loop): {end_time_loop - start_time_loop:0.6f}")
+                return t1, d1, output1, p, v_input
 
         for length in range(self.min_length, self.max_length):
             index = length - self.min_length
@@ -285,53 +312,21 @@ class Program:
 
 # obcinać od czasu do czasu
 
-#       self.max_length = 1
-#       v_input = outs[self.max_length][0]
-#       p = outs[self.max_length][1]
-#       print(len(p))
-#       p = [float(p[i]) for i in range(len(p))]
-#       new_words = []
-#       q = []
-#       for i in range(len(p)):
-#           if p[i] > 1e-5:
-#               new_words.append(v_input[i]['w'])
-#               q.append((p[i], new_words[-1]))
-#       q = sorted(q, key=lambda x: x[0], reverse=True)
-#       print(q)
-#       best_from_previous = []
-#       self.max_length = 0
-#       for length in range(self.max_length, self.max_length + 10):
+        v_input = outs[-1][0]
+        p = outs[-1][1]
+        print(len(p))
+        p = [float(p[i]) for i in range(len(p))]
+        (new_words, q) = leave_only_best(p, v_input)
+        (t1, d1, output1, p, v_input) = perform_n(new_words)
+#       for length in range(self.max_length, self.max_length + 5):
 #           start_time_loop = time.perf_counter()
-
-#           new_words = self.wg.add_layer(new_words)
-#           cascader = Cascader()
-#           for i in range(len(new_words)):
-#               new_words[i] = cascader.cascade_word(new_words[i])
-#           new_words = np.unique(new_words)
-#           start_time = time.perf_counter()
-#           random_words = random_inputs(length, amount=1000)
-#           end_time = time.perf_counter()
-#           print(f"Execution Time (random): {end_time - start_time:0.6f}")
-#           for b in best_from_previous:
-#               random_words.append(b)
-#           v = qc.lp_input.ProgramInput(wg=self.wg, length=length)
-#           #v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
-#           v_input = v.channels_from_words(random_words).input
-
+#           new_words = cascade_list(self.wg.add_layer(new_words))
+#           v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
 #           t1, d1, output1, p = lp1_channels(v_input, target)
 #           print("distance: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
-#           #print(len(new_words))
-#           new_words = []
-#           q = []
-#           p = [float(p[i]) for i in range(len(p))]
-#           for i in range(len(p)):
-#               if p[i] > 0.1:
-#                   new_words.append(v_input[i]['w'])
-#                   q.append((p[i], new_words[-1]))
-#           _, best_from_previous = np.array(sorted(q, key=lambda x: x[0], reverse=True)).T
 #           end_time_loop = time.perf_counter()
 #           print(f"Execution Time (loop): {end_time_loop - start_time_loop:0.6f}")
-#       return ['test']
+        return ['test']
 
     def threaded_program(self, channel: qc.channel.Channel, program: str, threads: int = 2):
 
@@ -355,7 +350,7 @@ class Program:
 
 if __name__ == "__main__":
     def random_inputs(length, amount: int = 100):
-        gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
+        gates = ['H', 'T', 'S']
         out = ["".join([gates[np.random.randint(0, 6)] for _ in range(length)]) for _ in range(amount)]
         out.append('I')
         return out
