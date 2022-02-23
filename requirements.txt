@@ -1,8 +1,6 @@
 numpy~=1.20.1
-qutip~=4.6.0
 scipy~=1.6.2
-matplotlib~=3.4.1
 setuptools~=56.0.0
 picos~=2.2.9
 tqdm~=4.61.0
-qworder~=0.5
+qworder~=0.6
