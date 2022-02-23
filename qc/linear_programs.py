@@ -274,7 +274,7 @@ class Program:
             # newlist = list(chain.from_iterable(newlist))
             input_list = list(chain.from_iterable([inputs[i] for i in range(index + 1)]))
             v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list) \
-                .remove_far_points(target=target, out_length=100)
+                .remove_far_points(target=target, out_length=300)
             t1, d1, output1, p = lp1_channels(v.input, target)
             t2, d2, output2, mix2, q, r = lp2_channels(v.input, target)
             d3, output3 = brute_channel(v.input, target)

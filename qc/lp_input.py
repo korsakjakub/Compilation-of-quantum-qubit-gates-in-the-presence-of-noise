@@ -11,6 +11,7 @@ from qworder.word_generator import WordGenerator
 
 from config import Config
 import qc
+from qc.channel import Channel, Noise
 
 
 def get_key_elements(arr: List[Dict], key: str) -> List:
@@ -56,9 +57,9 @@ class ProgramInput:
         else:
             self.input: List[WordDict] = []
 
-    # Given a list of words,
+    # Given a list of words_b,
     # it returns a dictionary,
-    # where the keys are words
+    # where the keys are words_b
     # and values are computed matrix compositions
     def channels_from_words(self, words):
         mat = []
@@ -128,3 +129,11 @@ class ProgramInput:
         else:
             self.input = self.channel.add_noise(self._write_states().input, self.wg.length)
         return self
+
+
+if __name__ == "__main__":
+    for l in range(10, 18):
+        lp = ProgramInput(WordGenerator(['H', 'S', 'T'], l), l, channel=Channel(noise=Noise.Depolarizing, vis=1.0))
+        lp.get_channels()
+        print("len: ", len(lp.input))
+    pass
