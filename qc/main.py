@@ -15,8 +15,8 @@ if __name__ == "__main__":
         program_name = "channels"
         amount = 1
 
-        program = qc.linear_programs.Program(min_length=1, max_length=7, wg=WordGenerator(gates, length=0,
-                                                                                           cascader=Cascader()))
+        program = qc.linear_programs.Program(min_length=1, max_length=13, wg=WordGenerator(gates, length=0,
+                                                                                          cascader=Cascader()))
         targets = qc.linear_programs.generate_target(program_name, amount)
 
         program.targets = targets
