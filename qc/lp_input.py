@@ -104,7 +104,7 @@ class ProgramInput:
 
     def _write_states(self):
         save_file = open(self.path, "wb")
-        words = self.wg.generate_words()
+        words = self.wg.generate_words(chunk_size=4096)
         self.wg.cascader.rules.write_rules()
         mat = self.channels_from_words(words).input
         pickle.dump(mat, save_file)

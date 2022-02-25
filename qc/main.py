@@ -8,7 +8,7 @@ import qc
 
 if __name__ == "__main__":
     for _ in range(1):
-        gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
+        gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
         #gates = ['H', 'T', 'S']
         results = qc.results.Results()
         start = timer()
