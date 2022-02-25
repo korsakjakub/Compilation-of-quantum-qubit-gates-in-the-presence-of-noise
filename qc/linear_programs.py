@@ -1,3 +1,7 @@
+import itertools
+import multiprocessing
+from functools import partial
+
 import numpy as np
 import scipy
 from numpy import copy
@@ -10,6 +14,8 @@ import qc
 import time
 from qworder.word_generator import WordGenerator
 from qworder.cascading_rules import Cascader
+
+from lp_input import WordDict
 
 
 def generate_target(program, amount):
@@ -103,7 +109,6 @@ def lp1_channels(v, target):
 
     output1 = sum([float(p[i]) * v[i]['m'] for i in range(n)])
     d1 = np.linalg.norm(output1 - target, 2)
-
     return t1, d1, output1, p
 
 
@@ -179,7 +184,7 @@ class Program:
         self.targets = targets
         self.noise_type = noise_type
 
-    def perform_states(self, inputs, target):
+    def perform_states(self, inputs):
 
         outs = []
         previous_out = []
@@ -197,10 +202,10 @@ class Program:
                     points[-1].append(v[s])
                 cm.append(np.average(points[-1], axis=0))
 
-            min = np.linalg.norm(cm[0] - target)
+            min = np.linalg.norm(cm[0] - self.targets)
             min_index = 0
             for i in range(len(cm)):
-                norm = np.linalg.norm(cm[i] - target)
+                norm = np.linalg.norm(cm[i] - self.targets)
                 if norm < min:
                     min = norm
                     min_index = i
@@ -209,17 +214,17 @@ class Program:
             v.append(np.array([0, 0, 0]))
 
             # LP1
-            t1, d1, output1, p = lp1_states(v, target)
+            t1, d1, output1, p = lp1_states(v, self.targets)
 
             # LP2
-            t2, d2, output2, mix2, q, r = lp2_states(v, target)
+            t2, d2, output2, mix2, q, r = lp2_states(v, self.targets)
 
             # BRUTE
-            output3 = sorted(v, key=lambda vector: np.linalg.norm(vector - target, 2))[0]
-            d3 = np.linalg.norm(output3 - target, 2)
+            output3 = sorted(v, key=lambda vector: np.linalg.norm(vector - self.targets, 2))[0]
+            d3 = np.linalg.norm(output3 - self.targets, 2)
 
             eps = 10e-5
-            out = [length, target.tolist(), float(t1), d1, output1.tolist(), float(t2), d2, output2.tolist(),
+            out = [length, self.targets.tolist(), float(t1), d1, output1.tolist(), float(t2), d2, output2.tolist(),
                    mix2.tolist(), d3, output3.tolist(), hull.volume]
             if not previous_out:
                 outs.append(copy.deepcopy(out))
@@ -237,7 +242,7 @@ class Program:
             else:
                 temp_out = copy.deepcopy(previous_out)
                 out2 = temp_out[5:9]
-            res_out = [length, target.tolist()]
+            res_out = [length, self.targets.tolist()]
             for e in out1:
                 res_out.append(e)
             for e in out2:
@@ -247,89 +252,118 @@ class Program:
             outs.append(res_out)
         return outs
 
-#   start_time = time.perf_counter()
-#   print("Hello World")
-#   end_time = time.perf_counter()
+    #   start_time = time.perf_counter()
+    #   print("Hello World")
+    #   end_time = time.perf_counter()
 
-#   print(f"Start Time : {start_time}")
-#   print(f"End Time : {end_time}")
-#   print(f"Execution Time : {end_time - start_time:0.6f}")
+    #   print(f"Start Time : {start_time}")
+    #   print(f"End Time : {end_time}")
+    #   print(f"Execution Time : {end_time - start_time:0.6f}")
 
-    def perform_channels(self, inputs, target):
+    def perform_initial_calculations_channels(self, inputs):
         outs = []
-        v = p = q = r = None
+        self.targets = np.array([[0.50607966, 0.26960331, 0.8192664], [-0.59451586, 0.79721188, 0.10490047],
+                                 [-0.62484739, -0.54015486, 0.56373616]])
 
-        target = np.array([[0.50607966,  0.26960331,  0.8192664], [-0.59451586,  0.79721188,  0.10490047], [-0.62484739, -0.54015486,  0.56373616]])
+        for length in range(self.min_length, self.max_length):
+            index = length - self.min_length
+            # input_list = [inputs[i] for i in range(index + 1)]
+            # newlist = list(chain.from_iterable(newlist))
+            input_list = list(chain.from_iterable([inputs[i] for i in range(index + 1)]))
+            v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list) \
+                .remove_far_points(target=self.targets, out_length=100)
+            t1, d1, output1, p = lp1_channels(v.input, self.targets)
+            t2, d2, output2, mix2, q, r = lp2_channels(v.input, self.targets)
+            d3, output3 = brute_channel(v.input, self.targets)
+            out = [length, self.targets.tolist(), float(t1), d1, output1, float(t2), d2, output2,
+                   mix2.tolist(), d3, output3]
+            outs.append([v.input, p])
+            print("distances: ", d1)
 
-        def leave_only_best(p, v_input):
-            new_words = []
-            q = []
-            for i in range(len(p)):
-                if p[i] > 1e-5:
-                    new_words.append(v_input[i]['w'])
-                    q.append((p[i], new_words[-1]))
-            q = sorted(q, key=lambda x: x[0], reverse=True)
-            return (new_words, q)
+        final_input_v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list) \
+            .remove_far_points(self.targets, 1000).input
+        splitting_input_v = final_input_v
+        for _ in range(5):
+            self.max_length += 1
+            splitting_input_v = self.perform_splitting_into_smaller_programs(splitting_input_v)
 
-        def random_inputs(length, amount: int = 100):
-            gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
-            cascader = Cascader()
-            out = [cascader.cascade_word("".join([gates[np.random.randint(0, 6)] for _ in range(length)])) for _ in range(amount)]
-            out.append('I')
-            return out
-
-        def cascade_list(words):
+    def perform_n_times_lp_channels(self, new_words, number=5):
+        def _cascade_list(words):
             cascader = Cascader()
             for i in range(len(words)):
                 words[i] = cascader.cascade_word(words[i])
             return np.unique(words)
 
-        def perform_n(new_words, number=5):
-            for length in range(self.max_length, self.max_length + number):
-                start_time_loop = time.perf_counter()
-                new_words = cascade_list(self.wg.add_layer(new_words))
-                v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
-                t1, d1, output1, p = lp1_channels(v_input, target)
-                print("distance: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
-                end_time_loop = time.perf_counter()
-                print(f"Execution Time (loop): {end_time_loop - start_time_loop:0.6f}")
-                return t1, d1, output1, p, v_input
+        for length in range(self.max_length, self.max_length + number):
+            start_time_loop = time.perf_counter()
+            new_words = _cascade_list(self.wg.add_layer(new_words))
+            v_input = qc.lp_input.ProgramInput(wg=self.wg, length=length). \
+                channels_from_words(new_words).remove_far_points(target=self.targets, out_length=100).input
+            t1, d1, output1, p = lp1_channels(v_input, self.targets)
+            print("distance: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
+            end_time_loop = time.perf_counter()
+            print(f"Execution Time (loop): {end_time_loop - start_time_loop:0.6f}")
+            return t1, d1, output1, p, v_input
 
-        for length in range(self.min_length, self.max_length):
-            index = length - self.min_length
-            #input_list = [inputs[i] for i in range(index + 1)]
-            # newlist = list(chain.from_iterable(newlist))
-            input_list = list(chain.from_iterable([inputs[i] for i in range(index + 1)]))
-            v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list) \
-                .remove_far_points(target=target, out_length=100)
-            t1, d1, output1, p = lp1_channels(v.input, target)
-            t2, d2, output2, mix2, q, r = lp2_channels(v.input, target)
-            d3, output3 = brute_channel(v.input, target)
-            out = [length, target.tolist(), float(t1), d1, output1, float(t2), d2, output2,
-                   mix2.tolist(), d3, output3]
-            outs.append([v.input, p])
-            print("distances: ", d1)
-
-# obcinać od czasu do czasu
+    def perform_leaving_only_best_channels(self, outs):
 
         v_input = outs[-1][0]
         p = outs[-1][1]
         print(len(p))
         p = [float(p[i]) for i in range(len(p))]
         (new_words, q) = leave_only_best(p, v_input)
-        (t1, d1, output1, p, v_input) = perform_n(new_words)
-#       for length in range(self.max_length, self.max_length + 5):
-#           start_time_loop = time.perf_counter()
-#           new_words = cascade_list(self.wg.add_layer(new_words))
-#           v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
-#           t1, d1, output1, p = lp1_channels(v_input, target)
-#           print("distance: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
-#           end_time_loop = time.perf_counter()
-#           print(f"Execution Time (loop): {end_time_loop - start_time_loop:0.6f}")
+        (t1, d1, output1, p, v_input) = self.perform_n_times_lp_channels(new_words)
+        #       for length in range(self.max_length, self.max_length + 5):
+        #           start_time_loop = time.perf_counter()
+        #           new_words = cascade_list(self.wg.add_layer(new_words))
+        #           v_input = v.channels_from_words(new_words).remove_far_points(target=target, out_length=100).input
+        #           t1, d1, output1, p = lp1_channels(v_input, target)
+        #           print("distance: ", d1, "\tvisibility: ", t1, "\tlength: ", length, "\t#: ", len(v_input))
+        #           end_time_loop = time.perf_counter()
+        #           print(f"Execution Time (loop): {end_time_loop - start_time_loop:0.6f}")
         return ['test']
 
-    def threaded_program(self, channel: qc.channel.Channel, program: str, threads: int = 2):
+    def perform_splitting_into_smaller_programs(self, list_of_inputs, chunk_size=100, processes=None):
+        chunks = np.array_split(list_of_inputs, len(list_of_inputs) / chunk_size)
 
+        # this doesn't work for some reason
+        # with multiprocessing.Pool(processes) as workers:
+        # chunk_results = workers.map(partial(lp1_channels, target=self.targets), chunks)
+        # print(chunk_results)
+        chunks_output = []
+        for chunk in chunks:
+            chunk = chunk.tolist()
+            identity_check = any(['I' == el['w'] for el in chunk])
+            if not identity_check:
+                chunk.append(WordDict(w='I', m=np.zeros((3, 3), dtype=float)))
+            (_, d1, output1, p) = lp1_channels(chunk, self.targets)
+            chunks_output = sorted(list(itertools.chain(chunks_output, leave_only_best(batch_float_cast(p), chunk)[1])),
+                                   key=lambda x: x[0], reverse=True)
+        chunks_words = np.array(chunks_output, dtype=object).T[1].tolist()
+        chunks_channels = qc.lp_input.ProgramInput(wg=self.wg, length=self.max_length) \
+            .channels_from_words(chunks_words).input
+        identity_check = any(['I' == el['w'] for el in chunks_channels])
+        if not identity_check:
+            chunks_channels.append(WordDict(w='I', m=np.zeros((3, 3), dtype=float)))
+        (_, d1, output1, p) = lp1_channels(chunks_channels, self.targets)
+        sorted_output = sorted(leave_only_best(batch_float_cast(p), chunks_channels)[1],
+                               key=lambda x: x[0], reverse=True)
+        print(d1)
+        print(sorted_output)
+        sorted_words = self.wg.add_layer(self.wg.add_layer(np.array(sorted_output, dtype=object).T[1].tolist()))
+        sorted_output_channels = qc.lp_input.ProgramInput(wg=self.wg, length=self.max_length) \
+            .channels_from_words(sorted_words).input
+        return sorted_output_channels
+#       words = self.wg.add_layer(np.array(sorted_output, dtype=object).T[1])
+#       chunks_channels = qc.lp_input.ProgramInput(wg=self.wg, length=self.max_length) \
+#           .channels_from_words(words).input
+#       (_, d1, output1, p) = lp1_channels(chunks_channels, self.targets)
+#       sorted_output = sorted(leave_only_best(batch_float_cast(p), chunks_channels)[1]
+#                              key=lambda x: x[0], reverse=True)
+#       print(d1)
+#       print(sorted_output)
+
+    def threaded_program(self, channel: qc.channel.Channel, program: str, threads: int = 2):
         with concurrent.futures.ProcessPoolExecutor() as executor:
             v = []
             for length in range(self.min_length, self.max_length):
@@ -344,8 +378,42 @@ class Program:
                 for i in range(threads):
                     results.append(executor.submit(self.perform_states, v, self.targets[i]))
             elif program == "channels":
-                results.append(self.perform_channels(v, self.targets[0]))
+                results.append(self.perform_initial_calculations_channels(v))
             return results
+
+
+def batch_float_cast(ps):
+    out = []
+    for p in ps.values():
+        out.append(p.value)
+    return out
+
+
+def random_inputs(length, amount: int = 100):
+    gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
+    cascader = Cascader()
+    out = [cascader.cascade_word("".join([gates[np.random.randint(0, 6)] for _ in range(length)])) for _ in
+           range(amount)]
+    out.append('I')
+    return out
+
+
+def leave_only_best(probabilities, lp_input):
+    new_inputs = []
+    new_probabilities = []
+    for i in range(len(probabilities)):
+        if probabilities[i] > 1e-5:
+            if lp_input[i]['w'] == 'I':
+                probabilities[i] = 0
+                weights_sum = np.sum(probabilities)
+                print("old probs: ", probabilities)
+                probabilities = [p/weights_sum for p in probabilities]
+                print("new probs: ", probabilities)
+            else:
+                new_inputs.append(lp_input[i]['w'])
+                new_probabilities.append((probabilities[i], new_inputs[-1]))
+    new_probabilities = sorted(new_probabilities, key=lambda x: x[0], reverse=True)
+    return new_inputs, new_probabilities
 
 
 if __name__ == "__main__":
@@ -354,5 +422,7 @@ if __name__ == "__main__":
         out = ["".join([gates[np.random.randint(0, 6)] for _ in range(length)]) for _ in range(amount)]
         out.append('I')
         return out
+
+
     words = random_inputs(50, 2)
     print(words)

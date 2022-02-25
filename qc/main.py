@@ -8,14 +8,14 @@ import qc
 
 if __name__ == "__main__":
     for _ in range(1):
-        # gates = ['H', 'T', 'R', 'X', 'Y', 'Z', 'I']
-        gates = ['H', 'T', 'S']
+        gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
+        #gates = ['H', 'T', 'S']
         results = qc.results.Results()
         start = timer()
         program_name = "channels"
         amount = 1
 
-        program = qc.linear_programs.Program(min_length=1, max_length=5, wg=WordGenerator(gates, length=0,
+        program = qc.linear_programs.Program(min_length=1, max_length=7, wg=WordGenerator(gates, length=0,
                                                                                            cascader=Cascader()))
         targets = qc.linear_programs.generate_target(program_name, amount)
 
