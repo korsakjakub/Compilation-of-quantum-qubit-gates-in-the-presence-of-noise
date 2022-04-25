@@ -9,6 +9,7 @@ from typing import List, Dict
 import numpy as np
 from qworder.word_generator import WordGenerator
 
+import channel
 from config import Config
 import qc
 from qc.channel import Channel, Noise
@@ -100,25 +101,35 @@ class ProgramInput:
             identity_check = any(['I' == el['w'] for el in self.input])
             if not identity_check:
                 self.input.append(WordDict(w='I', m=np.zeros((3, 3), dtype=float)))
+        elif self.input[0]['m'].shape == (4, 4):  # affine norm
+            if target.shape == (3, 3):
+                target = np.concatenate((target, np.array([[0], [0], [0]])), axis=1)
+                target = np.concatenate((target, np.array([[0, 0, 0, 1]])), axis=0)
+            self.input = sorted(self.input, key=lambda vector: channel.affine_channel_distance(vector['m'], target))[
+                         0:out_length - 1]
+            identity_check = any(['I' == el['w'] for el in self.input])
+            if not identity_check:
+                self.input.append(WordDict(w='I', m=np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1]])))
         return self
 
     def _write_states(self):
         save_file = open(self.path, "wb")
-        words = self.wg.generate_words(chunk_size=4096)
+        words = self.wg.generate_words()  # chunk_size=4096)
         self.wg.cascader.rules.write_rules()
         mat = self.channels_from_words(words).input
         pickle.dump(mat, save_file)
         save_file.close()
         return self
 
-    def get_vectors(self) -> List[WordDict]:
+    def get_vectors(self):
         if os.path.isfile(self.path):
             file = open(self.path, "rb")
-            data = self.channel.add_noise(pickle.load(file).input, length=self.wg.length)
+            data = self.channel.add_noise(pickle.load(file), length=self.wg.length)
         else:
             data = self.channel.add_noise(self._write_states().input, length=self.wg.length)
         # Apply a vector to each matrix an return
-        return [WordDict(el['w'], np.dot(el['m'], np.array([0.0, 0.0, 1.0]))) for el in data]
+        self.input = [WordDict(el['w'], np.dot(el['m'], np.array([0.0, 0.0, 1.0]))) for el in data]
+        return self
 
     def get_channels(self):
         if os.path.isfile(self.path):
@@ -132,8 +143,8 @@ class ProgramInput:
 
 
 if __name__ == "__main__":
-    for l in range(10, 18):
-        lp = ProgramInput(WordGenerator(['H', 'S', 'T'], l), l, channel=Channel(noise=Noise.Depolarizing, vis=1.0))
+    for length in range(1, 6):
+        lp = ProgramInput(WordGenerator(['H', 'S', 'T'], length), length, channel=Channel(noise=Noise.AmplitudeDamping,
+                                                                                          vis=0.9))
         lp.get_channels()
         print("len: ", len(lp.input))
-    pass
