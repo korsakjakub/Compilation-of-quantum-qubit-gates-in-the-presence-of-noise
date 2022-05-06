@@ -12,6 +12,7 @@ from scipy.spatial.transform import Rotation
 
 import channel
 import qc
+from qc import lp_input
 from channel import affine_channel_distance
 from lp_input import WordDict
 
@@ -88,14 +89,14 @@ def lp3_channels(v, target):
     problem.add_list_of_constraints([p[i] >= 0 for i in range(n)])
     problem.add_constraint(1 == pc.sum([p[i] for i in range(n)]))
     problem.add_constraint(t * target + y == pc.sum([p[j] * v[j]['m'] for j in range(n)]))
-    problem.add_constraint(pc.norm(y) <= 1-t)
-
+    problem.add_constraint(pc.SpectralNorm(y) <= 1-t)
     problem.set_objective("max", t)
-    print("\nTarget: \n", target)
-    print(problem)
+    #print("\nTarget: \n", target)
+    #print(problem)
     problem.solve(solver='cvxopt')
     output = sum([float(p[i]) * v[i]['m'] for i in range(n)])
     d = np.linalg.norm(output - target, 2)
+    print("lp3: d: ", d, " t", t)
     return t, d, output, p
 
 
@@ -455,30 +456,35 @@ class Program:
                 t2, d2, output2, mix2, q, r = lp2_channels_affine(v.input, self.targets)
                 t3, d3, output3, p = lp3_channels_affine(v.input, self.targets)
             else:
-                t1, d1, output1, p = lp1_channels(v.input, self.targets)
-                t2, d2, output2, mix2, q, r = lp2_channels(v.input, self.targets)
+                #t1, d1, output1, p = lp1_channels(v.input, self.targets)
+                #t2, d2, output2, mix2, q, r = lp2_channels(v.input, self.targets)
                 t3, d3, output3, p = lp3_channels(v.input, self.targets)
 
+            _, wp = leave_only_best(batch_float_cast(p), v.input)
+            print(wp)
+            t1, t2, d1, d2 = 0, 0, 0, 0
             print("visibilities (mix/opt/con): ", t1, "\t", t2, "\t", t3)
             print("distances (mix/opt/con): ", d1, "\t", d2, "\t", d3)
 
-            t1comb.append(float(t1))
-            t2comb.append(float(t2))
+            #t1comb.append(float(t1))
+            #t2comb.append(float(t2))
             t3comb.append(float(t3))
 
-            d1comb.append(float(d1))
-            d2comb.append(float(d2))
+            #d1comb.append(float(d1))
+            #d2comb.append(float(d2))
             d3comb.append(float(d3))
 
-        rn = np.arange(0, len(t1comb), 1)
-        plt.plot(rn, t1comb, rn, t2comb, rn, t3comb)
-        plt.ylabel('vis')
-        plt.show()
+        #rn = np.arange(0, len(t1comb), 1)
+        #plt.plot(rn, t1comb, rn, t2comb, rn, t3comb)
+        #plt.ylabel('vis')
+        #plt.show()
 
-        rn = np.arange(0, len(d1comb), 1)
-        plt.plot(rn, d1comb, rn, d2comb, rn, d3comb)
-        plt.ylabel('distance')
-        plt.show()
+        #rn = np.arange(0, len(d1comb), 1)
+        #plt.plot(rn, d1comb, rn, d2comb, rn, d3comb)
+        #plt.ylabel('distance')
+        #plt.show()
+
+        self.perform_splitting_into_smaller_programs(v.input)
             #d3, output3 = brute_channel(v.input, self.targets)
             #out = [length, self.targets.tolist(), float(t1), d1, output1, float(t2), d2, output2,
                    #mix2.tolist(), d3, output3]
@@ -536,7 +542,7 @@ class Program:
             identity_check = any(['I' == el['w'] for el in chunk])
             if not identity_check:
                 chunk.append(WordDict(w='I', m=np.zeros((3, 3), dtype=float)))
-            (_, d1, output1, p) = lp1_channels(chunk, self.targets)
+            (t1, d1, output1, p) = lp3_channels(chunk, self.targets)
             chunks_output = sorted(list(itertools.chain(chunks_output, leave_only_best(batch_float_cast(p), chunk)[1])),
                                    key=lambda x: x[0], reverse=True)
         chunks_words = np.array(chunks_output, dtype=object).T[1].tolist()
@@ -545,12 +551,12 @@ class Program:
         identity_check = any(['I' == el['w'] for el in chunks_channels])
         if not identity_check:
             chunks_channels.append(WordDict(w='I', m=np.zeros((3, 3), dtype=float)))
-        (_, d1, output1, p) = lp1_channels(chunks_channels, self.targets)
+        (t1, d1, output1, p) = lp3_channels(chunks_channels, self.targets)
         sorted_output = sorted(leave_only_best(batch_float_cast(p), chunks_channels)[1],
                                key=lambda x: x[0], reverse=True)
-        print(d1)
+        print(d1, "\t", t1)
         print(sorted_output)
-        sorted_words = self.wg.add_layer(self.wg.add_layer(np.array(sorted_output, dtype=object).T[1].tolist()))
+        sorted_words = np.array(sorted_output, dtype=object).T[1].tolist()
         sorted_output_channels = qc.lp_input.ProgramInput(wg=self.wg, length=self.max_length) \
             .channels_from_words(sorted_words).input
         return sorted_output_channels

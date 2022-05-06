@@ -5,6 +5,7 @@ from qworder.word_generator import WordGenerator
 from tqdm import tqdm
 
 import qc
+from qc import results, linear_programs
 
 if __name__ == "__main__":
     for _ in range(1):
@@ -19,7 +20,7 @@ if __name__ == "__main__":
         targets = qc.linear_programs.generate_target(program_name, amount)
 
         program.targets = targets
-        program.noise_type = qc.channel.Noise.AmplitudeDamping
+        program.noise_type = qc.channel.Noise.Depolarizing
         for vv in tqdm(range(1)):
             vis = round(0.99 - 1e-4 * vv, 4)
             channel = qc.channel.Channel(vis=vis, noise=program.noise_type)
