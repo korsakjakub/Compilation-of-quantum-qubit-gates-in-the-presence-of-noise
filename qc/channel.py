@@ -1,26 +1,31 @@
 from __future__ import annotations
 
 import enum
-import math
 from typing import List
 
 import numpy as np
-import picos as pc
+from scipy.linalg import norm
+from scipy.optimize import minimize
 
 import qc
 
 
-def affine_channel_norm(delta, c):
-    problem = pc.Problem()
-    v = pc.RealVariable('v', 3)
-    t = pc.RealVariable('t', 1)
-    problem.add_list_of_constraints(t <= pc.Norm(delta * v + c))
-    # problem.add_constraint(pc.Norm(delta * v + c) <= t)
-    # problem.set_objective('min', t)
-    problem.set_objective('max', t)
-    print(problem)
-    solution = problem.solve(solver="cvxopt")
-    print(solution.primals)
+def affine_channel_distance(ch1: np.ndarray, ch2: np.ndarray):
+    d = (ch1 - ch2)[:3, :3]
+    c = (ch1 - ch2)[:3, 3].reshape((3, 1))
+
+    def _objective(var_vec):
+        return -norm(d @ var_vec + c) / (np.sqrt(3))
+
+    def _constraint1(var_vec):
+        return 1 - norm(var_vec)
+
+    v0 = np.array([0.5, 0.5, 0.5], dtype=float)
+    domain = (-1.0, 1.0)
+    bound = (domain, domain, domain)
+    con = {'type': 'ineq', 'fun': _constraint1}
+    sol = minimize(_objective, v0, method='SLSQP', bounds=bound, constraints=con)
+    return -sol.fun
 
 
 class Noise(enum.Enum):
@@ -36,7 +41,7 @@ class Channel(object):
 
     def __init__(self, noise: Noise, vis: float = 1.0):
         self._rot = np.empty(shape=(3, 3))
-        self.visibility = vis
+        self.eta = vis
         self.noise_type = noise
 
     @property
@@ -44,18 +49,28 @@ class Channel(object):
         return self._rot
 
     def add_noise(self, input_channels: List[qc.lp_input.WordDict], length: int) -> List[qc.lp_input.WordDict]:
-        m = np.eye(3)
         if self.noise_type == Noise.Depolarizing:
-            m = np.eye(3) * self.visibility ** length
+            m = np.eye(3) * (1 - self.eta) ** length
         elif self.noise_type == Noise.PauliX:
-            m = np.array([[1, 0, 0], [0, 2 * self.visibility - 1, 0], [0, 0, 2 * self.visibility - 1]], dtype=float) \
+            m = np.array([[1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 2 * (1-self.eta) - 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.PauliY:
-            m = np.array([[2 * self.visibility - 1, 0, 0], [0, 1, 0], [0, 0, 2 * self.visibility - 1]], dtype=float) \
+            m = np.array([[2 * (1-self.eta) - 1, 0, 0], [0, 1, 0], [0, 0, 2 * (1-self.eta) - 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.PauliZ:
-            m = np.array([[2 * self.visibility - 1, 0, 0], [0, 2 * self.visibility - 1, 0], [0, 0, 1]], dtype=float) \
+            m = np.array([[2 * (1-self.eta) - 1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 1]], dtype=float) \
                 ** length
+        elif self.noise_type == Noise.AmplitudeDamping:
+            # amplitude damping represented by 4x4 matrix -> affine transformation r' = N r + c
+            m = np.array([[np.sqrt((1-self.eta)), 0, 0, 0], [0, np.sqrt((1-self.eta)), 0, 0],
+                          [0, 0, (1-self.eta), self.eta], [0, 0, 0, 1]], dtype=float) ** length
+            for i in range(len(input_channels)):
+                # append a column and a row at the end so the shapes match
+                affine_mat = np.concatenate(
+                    (np.concatenate((input_channels[i]['m'], np.array([[0], [0], [0]], dtype=float)), axis=1),
+                     np.array([[0, 0, 0, 1]], dtype=float)), axis=0)
+                input_channels[i]['m'] = np.matmul(m, affine_mat)
+            return input_channels
         else:
             m = np.eye(3)
         for i in range(len(input_channels)):
@@ -64,6 +79,12 @@ class Channel(object):
 
 
 if __name__ == "__main__":
-    test_delta = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    test_c = np.array([1 / math.sqrt(3), 1 / math.sqrt(3), 1 / math.sqrt(3)])
-    affine_channel_norm(test_delta, test_c)
+    channel1 = np.array([[0, 0, 0, 0],
+                         [0, 1, 0, 0],
+                         [0, 0, 0, 0],
+                         [0, 0, 0, 1]])
+    channel2 = np.array([[1, 0, 0, 0],
+                         [0, 1, 0, 0],
+                         [0, 0, 1, 0.3],
+                         [0, 0, 0, 1]])
+    print(affine_channel_distance(channel1, channel2))

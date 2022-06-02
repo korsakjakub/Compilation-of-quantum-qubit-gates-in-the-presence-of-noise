@@ -5,11 +5,11 @@ from qworder.word_generator import WordGenerator
 from tqdm import tqdm
 
 import qc
+from qc import results, linear_programs
 
 if __name__ == "__main__":
     for _ in range(1):
         gates = ['H', 'T', 'R', 'X', 'Y', 'Z']
-        #gates = ['H', 'T', 'S']
         results = qc.results.Results()
         start = timer()
         program_name = "channels"
@@ -20,13 +20,13 @@ if __name__ == "__main__":
         targets = qc.linear_programs.generate_target(program_name, amount)
 
         program.targets = targets
-        program.noise_type = qc.channel.Noise.Depolarizing
-        for vv in tqdm(range(1)):
-            vis = round(1.00 - 1e-4 * vv, 4)
-            channel = qc.channel.Channel(vis=vis, noise=qc.channel.Noise.PauliY)
+        program.noise_type = qc.channel.Noise.AmplitudeDamping
+        for vv in tqdm(range(9)):
+            vis = round(0.01 + 1e-2 * vv, 2)
+            channel = qc.channel.Channel(vis=vis, noise=program.noise_type)
             res = program.threaded_program(channel=channel,
                                            program=program_name,
                                            threads=amount)
-            results.write(res, vis, program_name)
+            results.write(res, vis, "amplitude-damping-31052022")#"depolarizing-eta-13052022")##"depolarizing-13052022")
         end = timer()
         print(f'czas: {end - start} s')
