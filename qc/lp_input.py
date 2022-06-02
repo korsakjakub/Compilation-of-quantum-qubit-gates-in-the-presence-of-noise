@@ -143,8 +143,14 @@ class ProgramInput:
 
 
 if __name__ == "__main__":
-    for length in range(1, 6):
-        lp = ProgramInput(WordGenerator(['H', 'S', 'T'], length), length, channel=Channel(noise=Noise.AmplitudeDamping,
-                                                                                          vis=0.9))
-        lp.get_channels()
-        print("len: ", len(lp.input))
+    for file in os.listdir(Config.WORDS_DIR):
+        f = open(Config.WORDS_DIR + file, "rb")
+        data = pickle.load(f)
+        f.close()
+        f = open(Config.WORDS_DIR + file, "wb")
+        #print(data)
+        data2 = [dict(x) for x in data]
+        print(data2)
+
+        pickle.dump(data2, f)
+        f.close()

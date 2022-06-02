@@ -41,7 +41,7 @@ class Channel(object):
 
     def __init__(self, noise: Noise, vis: float = 1.0):
         self._rot = np.empty(shape=(3, 3))
-        self.visibility = vis
+        self.eta = vis
         self.noise_type = noise
 
     @property
@@ -50,20 +50,20 @@ class Channel(object):
 
     def add_noise(self, input_channels: List[qc.lp_input.WordDict], length: int) -> List[qc.lp_input.WordDict]:
         if self.noise_type == Noise.Depolarizing:
-            m = np.eye(3) * self.visibility ** length
+            m = np.eye(3) * (1 - self.eta) ** length
         elif self.noise_type == Noise.PauliX:
-            m = np.array([[1, 0, 0], [0, 2 * self.visibility - 1, 0], [0, 0, 2 * self.visibility - 1]], dtype=float) \
+            m = np.array([[1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 2 * (1-self.eta) - 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.PauliY:
-            m = np.array([[2 * self.visibility - 1, 0, 0], [0, 1, 0], [0, 0, 2 * self.visibility - 1]], dtype=float) \
+            m = np.array([[2 * (1-self.eta) - 1, 0, 0], [0, 1, 0], [0, 0, 2 * (1-self.eta) - 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.PauliZ:
-            m = np.array([[2 * self.visibility - 1, 0, 0], [0, 2 * self.visibility - 1, 0], [0, 0, 1]], dtype=float) \
+            m = np.array([[2 * (1-self.eta) - 1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.AmplitudeDamping:
             # amplitude damping represented by 4x4 matrix -> affine transformation r' = N r + c
-            m = np.array([[np.sqrt(self.visibility), 0, 0, 0], [0, np.sqrt(self.visibility), 0, 0],
-                          [0, 0, self.visibility, 1 - self.visibility], [0, 0, 0, 1]], dtype=float) ** length
+            m = np.array([[np.sqrt((1-self.eta)), 0, 0, 0], [0, np.sqrt((1-self.eta)), 0, 0],
+                          [0, 0, (1-self.eta), self.eta], [0, 0, 0, 1]], dtype=float) ** length
             for i in range(len(input_channels)):
                 # append a column and a row at the end so the shapes match
                 affine_mat = np.concatenate(

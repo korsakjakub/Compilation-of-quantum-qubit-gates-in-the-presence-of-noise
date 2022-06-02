@@ -12,6 +12,7 @@ from scipy.spatial.transform import Rotation
 
 import channel
 import qc
+from geometric_randomization import geometric_randomization
 from qc import lp_input
 from channel import affine_channel_distance
 from lp_input import WordDict
@@ -40,6 +41,9 @@ def brute_channel(v, target):
 
 
 def brute_channel_affine(v, target):
+    if target.shape == (3, 3):
+        target = np.concatenate((target, np.array([[0], [0], [0]])), axis=1)
+        target = np.concatenate((target, np.array([[0, 0, 0, 1]])), axis=0)
     output3 = sorted(v, key=lambda vector: channel.affine_channel_distance(vector['m'], target))[0]
     return channel.affine_channel_distance(output3['m'], target), output3
 
@@ -62,12 +66,12 @@ def lp3_channels_affine(v, target):
     problem.add_constraint(1 == pc.sum([p[i] for i in range(n)]))
     problem.add_constraint(t * target + y == pc.sum([p[j] * m[j] for j in range(n)]))
     problem.add_constraint(w == pc.sum([p[j] * c[j] for j in range(n)]))
-    problem.add_constraint(pc.norm(y) <= 1-t)
-    problem.add_constraint(pc.norm(w) <= 1-t)
+    problem.add_constraint(pc.SpectralNorm(y) <= 1-t)
+    problem.add_constraint(pc.Norm(w) <= 1-t)
 
     problem.set_objective("max", t)
-    print("\nTarget: \n", target)
-    print(problem)
+    #print("\nTarget: \n", target)
+    #print(problem)
     problem.solve(solver='cvxopt')
     output = sum([float(p[i]) * v[i]['m'] for i in range(n)])
     target = np.concatenate((target, np.array([[0], [0], [0]])), axis=1)
@@ -443,36 +447,42 @@ class Program:
         d1comb = []
         d2comb = []
         d3comb = []
+        d4comb = []
         self.targets = np.array([[0.50607966, 0.26960331, 0.8192664], [-0.59451586, 0.79721188, 0.10490047],
                                  [-0.62484739, -0.54015486, 0.56373616]])
 
         for length in range(self.min_length, self.max_length):
             index = length - self.min_length
             input_list = list(chain.from_iterable([inputs[i] for i in range(index + 1)]))
+            if length < 12:
+                continue
             v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list)\
-                .remove_far_points(target=self.targets, out_length=300)
+                .remove_far_points(target=self.targets, out_length=500)
+            #v.input = geometric_randomization(input_list, self.targets)
             if self.noise_type.name == "AmplitudeDamping":
                 t1, d1, output1, p = lp1_channels_affine(v.input, self.targets)
                 t2, d2, output2, mix2, q, r = lp2_channels_affine(v.input, self.targets)
                 t3, d3, output3, p = lp3_channels_affine(v.input, self.targets)
+                d4, _ = brute_channel_affine(v.input, self.targets)
             else:
-                #t1, d1, output1, p = lp1_channels(v.input, self.targets)
-                #t2, d2, output2, mix2, q, r = lp2_channels(v.input, self.targets)
+                t1, d1, output1, p = lp1_channels(v.input, self.targets)
+                t2, d2, output2, mix2, q, r = lp2_channels(v.input, self.targets)
                 t3, d3, output3, p = lp3_channels(v.input, self.targets)
+                d4, _ = brute_channel(v.input, self.targets)
 
-            _, wp = leave_only_best(batch_float_cast(p), v.input)
-            print(wp)
-            t1, t2, d1, d2 = 0, 0, 0, 0
-            print("visibilities (mix/opt/con): ", t1, "\t", t2, "\t", t3)
-            print("distances (mix/opt/con): ", d1, "\t", d2, "\t", d3)
+            #_, wp = leave_only_best(batch_float_cast(p), v.input)
+            #print(wp)
+            #print("visibilities (mix/opt/con): ", t1, "\t", t2, "\t", t3)
+            #print("distances (mix/opt/con): ", d1, "\t", d2, "\t", d3)
 
-            #t1comb.append(float(t1))
-            #t2comb.append(float(t2))
+            t1comb.append(float(t1))
+            t2comb.append(float(t2))
             t3comb.append(float(t3))
 
-            #d1comb.append(float(d1))
-            #d2comb.append(float(d2))
+            d1comb.append(float(d1))
+            d2comb.append(float(d2))
             d3comb.append(float(d3))
+            d4comb.append(float(d4))
 
         #rn = np.arange(0, len(t1comb), 1)
         #plt.plot(rn, t1comb, rn, t2comb, rn, t3comb)
@@ -484,14 +494,12 @@ class Program:
         #plt.ylabel('distance')
         #plt.show()
 
-        self.perform_splitting_into_smaller_programs(v.input)
-            #d3, output3 = brute_channel(v.input, self.targets)
-            #out = [length, self.targets.tolist(), float(t1), d1, output1, float(t2), d2, output2,
-                   #mix2.tolist(), d3, output3]
+        #self.perform_splitting_into_smaller_programs(v.input)
+            out = [length, t1comb, t2comb, t3comb, d1comb, d2comb, d3comb, d4comb]
             #outs.append([v.input, p])
-            #outs.append(out)
-        #return outs
-        return False
+            outs.append(out)
+            print(d4)
+        return outs
 
     def perform_n_times_lp_channels(self, new_words, number=5):
         def _cascade_list(words):
