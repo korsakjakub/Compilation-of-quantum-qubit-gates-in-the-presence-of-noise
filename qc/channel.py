@@ -7,7 +7,7 @@ import numpy as np
 from scipy.linalg import norm
 from scipy.optimize import minimize
 
-import qc
+from qc import lp_input
 
 
 def affine_channel_distance(ch1: np.ndarray, ch2: np.ndarray):
@@ -48,14 +48,14 @@ class Channel(object):
     def rot(self) -> np.array:
         return self._rot
 
-    def add_noise(self, input_channels: List[qc.lp_input.WordDict], length: int) -> List[qc.lp_input.WordDict]:
+    def add_noise(self, input_channels: List[lp_input.WordDict], length: int) -> List[lp_input.WordDict]:
         if self.noise_type == Noise.Depolarizing:
             m = np.eye(3) * (1 - self.eta) ** length
         elif self.noise_type == Noise.PauliX:
             m = np.array([[1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 2 * (1-self.eta) - 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.PauliY:
-            m = np.array([[2 * (1-self.eta) - 1, 0, 0], [0, 1, 0], [0, 0, 2 * (1-self.eta) - 1]], dtype=float) \
+            m = np.array([[2 * (1 - self.eta) - 1, 0, 0], [0, 1, 0], [0, 0, 2 * (1 - self.eta) - 1]], dtype=float)
                 ** length
         elif self.noise_type == Noise.PauliZ:
             m = np.array([[2 * (1-self.eta) - 1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 1]], dtype=float) \
