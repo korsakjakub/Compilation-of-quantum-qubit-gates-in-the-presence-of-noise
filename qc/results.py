@@ -15,16 +15,18 @@ class Results(object):
         self.fig_dir = Config.FIGURES_DIR
 
     def write(self, results: list, vis: float, program: str) -> None:
-        for t in results:
-            for r in t:
-                dir = self.dir + program + "/"
-                path = dir + str(r[0]) + "V" + str(vis)
-                if not os.path.exists(dir):
-                    os.makedirs(dir)
-                output_file = open(path, "a")
-                r = [str(r[i]) for i in range(len(r))]
-                output_file.write('\t'.join(r) + '\n')
-                output_file.close()
+        for res in results:
+            dir = self.dir + program + "/"
+            path = dir + str(res[0]) + "V" + str(vis)
+            if not os.path.exists(dir):
+                os.makedirs(dir)
+            output_file = open(path, "a")
+            col_wout_l = res[1:]
+            rows = np.array(col_wout_l).T.tolist()
+            for row in rows:
+                row_str = [str(el) for el in row]
+                output_file.write('\t'.join(row_str) + '\n')
+            output_file.close()
 
     def plot_depth(self, programs) -> None:
         fig, ax = plt.subplots(nrows=1, ncols=len(programs), sharex=True, sharey=True)

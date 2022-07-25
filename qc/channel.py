@@ -52,18 +52,19 @@ class Channel(object):
         if self.noise_type == Noise.Depolarizing:
             m = np.eye(3) * (1 - self.eta) ** length
         elif self.noise_type == Noise.PauliX:
-            m = np.array([[1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 2 * (1-self.eta) - 1]], dtype=float) \
+            m = np.array([[1, 0, 0], [0, 2 * (1 - self.eta) - 1, 0], [0, 0, 2 * (1 - self.eta) - 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.PauliY:
-            m = np.array([[2 * (1 - self.eta) - 1, 0, 0], [0, 1, 0], [0, 0, 2 * (1 - self.eta) - 1]], dtype=float)
+            m = np.array([[2 * (1 - self.eta) - 1, 0, 0], [0, 1, 0], [0, 0, 2 * (1 - self.eta) - 1]], dtype=float) \
                 ** length
         elif self.noise_type == Noise.PauliZ:
-            m = np.array([[2 * (1-self.eta) - 1, 0, 0], [0, 2 * (1-self.eta) - 1, 0], [0, 0, 1]], dtype=float) \
-                ** length
+            m = np.array([[2 * (1 - self.eta) - 1, 0, 0], [0, 2 * (1 - self.eta) - 1, 0], [0, 0, 1]], dtype=float) \
+            ** length
+
         elif self.noise_type == Noise.AmplitudeDamping:
             # amplitude damping represented by 4x4 matrix -> affine transformation r' = N r + c
-            m = np.array([[np.sqrt((1-self.eta)), 0, 0, 0], [0, np.sqrt((1-self.eta)), 0, 0],
-                          [0, 0, (1-self.eta), self.eta], [0, 0, 0, 1]], dtype=float) ** length
+            m = np.array([[np.sqrt((1 - self.eta)), 0, 0, 0], [0, np.sqrt((1 - self.eta)), 0, 0],
+                          [0, 0, (1 - self.eta), self.eta], [0, 0, 0, 1]], dtype=float) ** length
             for i in range(len(input_channels)):
                 # append a column and a row at the end so the shapes match
                 affine_mat = np.concatenate(
@@ -73,9 +74,9 @@ class Channel(object):
             return input_channels
         else:
             m = np.eye(3)
-        for i in range(len(input_channels)):
-            input_channels[i]['m'] = np.matmul(m, input_channels[i]['m'])
-        return input_channels
+            for i in range(len(input_channels)):
+                input_channels[i]['m'] = np.matmul(m, input_channels[i]['m'])
+            return input_channels
 
 
 if __name__ == "__main__":
