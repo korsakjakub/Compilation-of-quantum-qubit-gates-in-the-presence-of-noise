@@ -1,7 +1,7 @@
-import concurrent.futures
-import itertools
 import multiprocessing
-import time
+from itertools import chain
+
+import multiprocessing
 from itertools import chain
 
 import matplotlib.pyplot as plt
@@ -13,10 +13,8 @@ from qworder.word_generator import WordGenerator
 from scipy.spatial.transform import Rotation
 from tqdm import tqdm
 
-import qc
-from lp_input import WordDict
-from qc import channel, lp_input
-from qc.channel import affine_channel_distance
+from channel import Channel, affine_channel_distance
+from lp_input import WordDict, ProgramInput
 
 
 def batch_float_cast(ps):
@@ -70,8 +68,8 @@ def brute_channel_affine(args):
     if target.shape == (3, 3):
         target = np.concatenate((target, np.array([[0], [0], [0]])), axis=1)
         target = np.concatenate((target, np.array([[0, 0, 0, 1]])), axis=0)
-    output = sorted(v, key=lambda vector: channel.affine_channel_distance(vector['m'], target))[0]
-    return round(channel.affine_channel_distance(output['m'], target), 4)
+    output = sorted(v, key=lambda vector: affine_channel_distance(vector['m'], target))[0]
+    return round(affine_channel_distance(output['m'], target), 4)
 
 
 def lp1_channels(args):
@@ -403,7 +401,6 @@ def lp3_states(args):
     problem.add_constraint(b ** 2 + c ** 2 + d ** 2 <= 1 / 4 * (1 - t) ** 2)
 
     problem.set_objective("max", t)
-    print(problem)
     problem.solve(solver='cvxopt')
     output = sum([float(p[i]) * v[i]['m'] for i in range(n)])
     x = target.value - output.value
@@ -423,15 +420,13 @@ class Program:
 
     def perform_states(self, inputs):
 
-        for length in range(self.min_length, self.max_length):
-            print("depth: ", length)
-            index = length - self.min_length
-            input_list = list(chain.from_iterable([inputs[i] for i in range(index + 1)]))
-            v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list) \
+        for length in range(1, self.max_length + 1):
+            index = length - self.min_length + 1
+            input_list = list(chain.from_iterable([inputs[i] for i in range(index)]))
+            v = ProgramInput(wg=self.wg, length=length, input_list=input_list) \
                 .remove_far_points(target=self.targets, out_length=300)
 
             self.targets = np.array([0.8086422, -0.56722564, -0.15605407])
-            print("target vector: ", self.targets)
 
             # LP1
             t1, d1, output1, p = lp1_states(v.input, self.targets)
@@ -442,7 +437,6 @@ class Program:
             # LP3
             t3, d3, output3, p = lp3_states(v.input, self.targets)
 
-            print("distances (mix/opt/con): ", d1, "\t", d2, "\t", d3)
 
             t1comb.append(float(t1))
             t2comb.append(float(t2))
@@ -461,11 +455,11 @@ class Program:
         #           d3 = np.linalg.norm(output3 - self.targets, 2)
         return ""
 
-    def distribute_calculations_channels(self, channel: qc.channel.Channel, threads: int):
+    def distribute_calculations_channels(self, channel: Channel, threads: int):
         inputs = []
-        for length in range(self.min_length, self.max_length):
+        for length in range(1, self.max_length + 1):
             self.wg.length = length
-            lpinput = lp_input.ProgramInput(channel=channel, wg=self.wg, length=length)
+            lpinput = ProgramInput(channel=channel, wg=self.wg, length=length)
             inputs.append(lpinput.get_channels().input.copy())
 
         outs = []
@@ -473,15 +467,14 @@ class Program:
         # [-0.62484739, -0.54015486, 0.56373616]])
 
         v_init = {i: [] for i in range(len(self.targets))}
-        for length in tqdm(range(self.min_length, self.max_length)):
-            index = length - self.min_length
-            input_list = inputs[index]
+        for length in tqdm(range(1, self.max_length + 1)):
+            input_list = inputs[length - 1]
             for target_index in range(len(self.targets)):
-                v = qc.lp_input.ProgramInput(wg=self.wg, length=length, input_list=input_list) \
+                v = ProgramInput(wg=self.wg, length=length, input_list=input_list) \
                     .remove_far_points(target=self.targets[target_index], out_length=100)
                 v_init[target_index] = list(chain.from_iterable([v_init[target_index], v.input]))
 
-            if length < 12:
+            if length < self.min_length:
                 continue
             programs_input = [(v_init[ti], self.targets[ti]) for ti in range(len(self.targets))]
             with multiprocessing.Pool(threads) as workers:
@@ -491,10 +484,10 @@ class Program:
                     d3 = workers.map(lp3_channels_affine, programs_input)
                     d4 = workers.map(brute_channel_affine, programs_input)
                 else:
-                    d1 = workers.map(lp1_channels, [(v_init[t], t) for t in self.targets])
-                    d2 = workers.map(lp2_channels, [(v_init[t], t) for t in self.targets])
-                    d3 = workers.map(lp3_channels, [(v_init[t], t) for t in self.targets])
-                    d4 = workers.map(brute_channel, [(v_init[t], t) for t in self.targets])
+                    d1 = workers.map(lp1_channels, programs_input)
+                    d2 = workers.map(lp2_channels, programs_input)
+                    d3 = workers.map(lp3_channels, programs_input)
+                    d4 = workers.map(brute_channel, programs_input)
 
             out = [length, d1, d2, d3, d4]
             outs.append(out)

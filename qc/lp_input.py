@@ -9,10 +9,8 @@ from typing import List, Dict
 import numpy as np
 from qworder.word_generator import WordGenerator
 
-import channel
 from config import Config
-import qc
-from qc.channel import Channel, Noise
+from channel import Channel, Noise
 
 
 def get_key_elements(arr: List[Dict], key: str) -> List:
@@ -45,10 +43,8 @@ class ProgramInput:
     _matrix = np.eye(3)
     input: List[WordDict] = []
 
-    def __init__(self, wg: WordGenerator, length: int, channel: qc.channel.Channel = None,
-                 input_list: List[WordDict] = None) -> None:
-        self.path = Config.WORDS_DIR + "L" + str(length) \
-                    + ".npy"
+    def __init__(self, wg: WordGenerator, length: int, channel: Channel = None, input_list: List[WordDict] = None):
+        self.path = Config.WORDS_DIR + "L" + str(length) + ".npy"
         if channel:
             self.channel = channel
         if wg:

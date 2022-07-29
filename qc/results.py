@@ -5,7 +5,7 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
-from qc.config import Config
+from config import Config
 
 
 class Results(object):
@@ -35,33 +35,27 @@ class Results(object):
         labels = ["No noise", "Depolarizing", "Amplitude damping"]
         for program in programs:
             path = self.dir + program + "/"
+            dvsL = {}
             for file in os.listdir(path):
-                f = open(path + file, "r")
-                _, t1, t2, t3, d1, d2, d3, d4 = f.read().split("\t")
-                d1 = [float(item) for item in d1[1:len(d1)-2].split(", ")]
-                d2 = [float(item) for item in d2[1:len(d2)-2].split(", ")]
-                d3 = [float(item) for item in d3[1:len(d3)-2].split(", ")]
-                d4 = [float(item) for item in d4[1:len(d4)-2].split(", ")]
-                print(d1)
-                print(d2)
-                print(d3)
-                print(d4)
-                rn = np.arange(1, len(d1)+1, 1)
-                ax[i].plot(rn, d1, label="Mixing")
-                ax[i].plot(rn, d2, label="Optimized")
-                ax[i].plot(rn, d3, label="Conic")
-                ax[i].plot(rn, d4, label="Deterministic")
-                ax[i].annotate(labels[i], xy=(0.1, 0.9), xycoords="axes fraction")
-                ax[i].set_xlabel("Depth of compilation")
-                break
+                # depth = file[:-4]
+                depth = file.split("V", 1)[0]
+                d = [np.loadtxt(path + file)[:, i] for i in range(4)]
+                d = [np.mean(col) for col in d]
+                dvsL[int(depth)] = d
+            pd = np.array([dvsL[i] for i in sorted(dvsL)]).T
+            rn = np.arange(1, len(pd[0]) + 1, 1)
+            ax[i].plot(rn, pd[0], label="Mixing")
+            ax[i].plot(rn, pd[1], label="Optimized")
+            ax[i].plot(rn, pd[2], label="Conic")
+            ax[i].plot(rn, pd[3], label="Deterministic")
+            ax[i].annotate(labels[i], xy=(0.1, 0.9), xycoords="axes fraction")
+            ax[i].set_xlabel("Depth of compilation")
             i += 1
 
         plt.xticks([3, 7, 12])
-        #ax0.set_xlabel("")
         ax[0].set_ylabel("Distance to target")
         plt.legend(loc='upper center', bbox_to_anchor=(-0.5, -0.2),
                    fancybox=False, shadow=False, ncol=4)
-        #plt.show()
         plt.savefig(self.dir + "dofL.png", dpi=300)
 
     def plot_noise_param(self, programs):
@@ -79,10 +73,10 @@ class Results(object):
                 with open(path + file, "r") as f:
                     noise_param = float(file[3:])
                     _, t1, t2, t3, d1, d2, d3, d4 = f.read().split("\t")
-                    d1 = [float(item) for item in d1[1:len(d1)-2].split(", ")][0]
-                    d2 = [float(item) for item in d2[1:len(d2)-2].split(", ")][0]
-                    d3 = [float(item) for item in d3[1:len(d3)-2].split(", ")][0]
-                    d4 = [float(item) for item in d4[1:len(d4)-2].split(", ")][0]
+#                   d1 = [float(item) for item in d1[1:len(d1)-2].split(", ")][0]
+#                   d2 = [float(item) for item in d2[1:len(d2)-2].split(", ")][0]
+#                   d3 = [float(item) for item in d3[1:len(d3)-2].split(", ")][0]
+#                   d4 = [float(item) for item in d4[1:len(d4)-2].split(", ")][0]
                     noise_param_vs_d1.append([noise_param, d1])
                     noise_param_vs_d2.append([noise_param, d2])
                     noise_param_vs_d3.append([noise_param, d3])
@@ -126,5 +120,7 @@ class Results(object):
 
 if __name__ == "__main__":
     res = Results()
+    output_paths = ["no-noise-28072022", "depolarizing-28072022", "amplitude-damping-26072022"]
     #res.plot_depth(["no-noise-13052022", "depolarizing-13052022", "amplitude-damping-13052022"])
-    res.plot_noise_param(["depolarizing-eta-13052022", "amplitude-damping-eta-31052022"])#, "amplitude-damping-13052022"])
+    #  res.plot_noise_param(["depolarizing-eta-13052022", "amplitude-damping-eta-31052022"])#, "amplitude-damping-13052022"])
+    res.plot_depth(output_paths)

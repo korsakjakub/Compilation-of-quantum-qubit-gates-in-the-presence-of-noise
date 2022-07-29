@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import enum
-from typing import List
 
 import numpy as np
 from scipy.linalg import norm
 from scipy.optimize import minimize
-
-from qc import lp_input
 
 
 def affine_channel_distance(ch1: np.ndarray, ch2: np.ndarray):
@@ -48,7 +45,7 @@ class Channel(object):
     def rot(self) -> np.array:
         return self._rot
 
-    def add_noise(self, input_channels: List[lp_input.WordDict], length: int) -> List[lp_input.WordDict]:
+    def add_noise(self, input_channels, length: int):
         if self.noise_type == Noise.Depolarizing:
             m = np.eye(3) * (1 - self.eta) ** length
         elif self.noise_type == Noise.PauliX:
@@ -74,9 +71,9 @@ class Channel(object):
             return input_channels
         else:
             m = np.eye(3)
-            for i in range(len(input_channels)):
-                input_channels[i]['m'] = np.matmul(m, input_channels[i]['m'])
-            return input_channels
+        for i in range(len(input_channels)):
+            input_channels[i]['m'] = np.matmul(m, input_channels[i]['m'])
+        return input_channels
 
 
 if __name__ == "__main__":
