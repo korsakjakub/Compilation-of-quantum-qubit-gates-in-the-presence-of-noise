@@ -1,5 +1,5 @@
-numpy~=1.20.1
-scipy~=1.6.2
+numpy~=1.21.5
+scipy~=1.7.3
 setuptools~=56.0.0
 picos~=2.2.9
 tqdm~=4.61.0

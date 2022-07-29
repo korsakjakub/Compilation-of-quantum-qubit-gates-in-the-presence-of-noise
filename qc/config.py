@@ -1,13 +1,17 @@
+from channel import Noise
+
+
 class Config:
     DIR = "files/"
     WORDS_DIR = DIR + "words/"
     OUTPUTS_DIR = DIR + "outputs/"
     FIGURES_DIR = DIR + "figures/"
-    THREADS = 1
+    THREADS = 10
     MAIN_ITERATIONS = 4
-    NOISE_ITERATIONS = 1
-    INITIAL_NOISE_PARAMETER = 0.01
+    NOISE_ITERATIONS = 10
+    INITIAL_NOISE_PARAMETER = 0.00
     NOISE_PARAMETER_ADDITION = 1e-2
-    MIN_LENGTH = 1
-    MAX_LENGTH = 2
-    OUTPUT_PATH = "depolarizing-28072022"
+    MIN_LENGTH = 12
+    MAX_LENGTH = 12
+    OUTPUT_PATH = "depolarizing-eta-29072022"
+    NOISE_TYPE = Noise.Depolarizing

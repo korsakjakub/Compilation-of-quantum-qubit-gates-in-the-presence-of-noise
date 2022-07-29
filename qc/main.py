@@ -21,7 +21,7 @@ if __name__ == "__main__":
         targets = generate_target(amount)
 
         program.targets = targets
-        program.noise_type = Noise.Depolarizing
+        program.noise_type = Config.NOISE_TYPE
         for vv in tqdm(range(Config.NOISE_ITERATIONS)):
             vis = round(Config.INITIAL_NOISE_PARAMETER + Config.NOISE_PARAMETER_ADDITION * vv, 2)
             ch = Channel(vis=vis, noise=program.noise_type)
