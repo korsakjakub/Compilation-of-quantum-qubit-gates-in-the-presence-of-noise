@@ -28,4 +28,4 @@ if __name__ == "__main__":
             r = program.distribute_calculations_channels(channel=ch, threads=amount)
             res.write(r, vis, Config.OUTPUT_PATH)
         end = timer()
-        print(f'Iteracja {i+1}/{Config.MAIN_ITERATIONS}\tczas: {end - start} s')
+        print(f'Iteracja {i+1}/{Config.MAIN_ITERATIONS}\tczas: {end - start} s\n\n')

@@ -10,7 +10,7 @@ import numpy as np
 from qworder.word_generator import WordGenerator
 
 from config import Config
-from channel import Channel, Noise
+from channel import Channel, Noise, affine_channel_distance
 
 
 def get_key_elements(arr: List[Dict], key: str) -> List:
@@ -101,7 +101,7 @@ class ProgramInput:
             if target.shape == (3, 3):
                 target = np.concatenate((target, np.array([[0], [0], [0]])), axis=1)
                 target = np.concatenate((target, np.array([[0, 0, 0, 1]])), axis=0)
-            self.input = sorted(self.input, key=lambda vector: channel.affine_channel_distance(vector['m'], target))[
+            self.input = sorted(self.input, key=lambda vector: affine_channel_distance(vector['m'], target))[
                          0:out_length - 1]
             identity_check = any(['I' == el['w'] for el in self.input])
             if not identity_check:
