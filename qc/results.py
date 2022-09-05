@@ -29,8 +29,8 @@ class Results(object):
             output_file.close()
 
     def plot_depth(self, programs) -> None:
-        fig, ax = plt.subplots(nrows=1, ncols=len(programs), sharex=True, sharey=True)
-        fig.subplots_adjust(bottom=0.3, wspace=0)
+        fig, ax = plt.subplots(nrows=1, ncols=len(programs), sharex=True, sharey=True, figsize=(7.67, 4.5))
+        fig.subplots_adjust(left=0.07, right=0.99, top=0.99, bottom=0.2, wspace=0)
         i = 0
         labels = ["No noise", "Depolarizing", "Amplitude damping"]
         for program in programs:
@@ -44,9 +44,9 @@ class Results(object):
                 dvsL[int(depth)] = d
             pd = np.array([dvsL[i] for i in sorted(dvsL)]).T
             rn = np.arange(1, len(pd[0]) + 1, 1)
-            ax[i].plot(rn, pd[0], label="Mixing")
-            ax[i].plot(rn, pd[1], label="Optimized")
-            ax[i].plot(rn, pd[2], label="Conic")
+            ax[i].plot(rn, pd[0], label="$t_1$")
+            ax[i].plot(rn, pd[1], label="$t_2$")
+            ax[i].plot(rn, pd[2], label="$t_3$")
             ax[i].plot(rn, pd[3], label="Deterministic")
             ax[i].annotate(labels[i], xy=(0.1, 0.9), xycoords="axes fraction")
             ax[i].set_xlabel("Depth of compilation")
@@ -54,13 +54,13 @@ class Results(object):
 
         plt.xticks([3, 7, 12])
         ax[0].set_ylabel("Distance to target")
-        plt.legend(loc='upper center', bbox_to_anchor=(-0.5, -0.17),
+        plt.legend(loc='upper center', bbox_to_anchor=(-0.5, -0.14),
                    fancybox=False, shadow=False, ncol=4)
         plt.savefig(self.dir + "dofL.png", dpi=300)
 
     def plot_noise_param(self, programs):
-        fig, ax = plt.subplots(nrows=1, ncols=len(programs), sharex=True, sharey=True)
-        fig.subplots_adjust(bottom=0.3, wspace=0)
+        fig, ax = plt.subplots(nrows=1, ncols=len(programs), sharex=True, sharey=True, figsize=(7.67, 4.5))
+        fig.subplots_adjust(left=0.07, right=0.99, top=0.98, bottom=0.2, wspace=0)
         labels = ["Depolarizing", "Amplitude damping"]
         i = 0
         for program in programs:
@@ -86,9 +86,9 @@ class Results(object):
             d2 = np.array(noise_param_vs_d2)[:, 1:].flatten()
             d3 = np.array(noise_param_vs_d3)[:, 1:].flatten()
             d4 = np.array(noise_param_vs_d4)[:, 1:].flatten()
-            ax[i].plot(noise, d1, label="Mixing")
-            ax[i].plot(noise, d2, label="Optimized")
-            ax[i].plot(noise, d3, label="Conic")
+            ax[i].plot(noise, d1, label="$t_1$")
+            ax[i].plot(noise, d2, label="$t_2$")
+            ax[i].plot(noise, d3, label="$t_3$")
             ax[i].plot(noise, d4, label="Deterministic")
             ax[i].annotate(labels[i], xy=(0.1, 0.9), xycoords="axes fraction")
             ax[i].set_xlabel("Noise parameter [%]")
@@ -96,9 +96,8 @@ class Results(object):
             ax[i].set_ylim([0.0, 0.5])
             i += 1
         ax[0].set_ylabel("Distance to target")
-        #ax[0].set_xticks(np.arange(1, 10, 2))
         ax[0].set_xticks([1, 3, 5, 7, 9])
-        plt.legend(loc='upper center', bbox_to_anchor=(0, -0.17),
+        plt.legend(loc='upper center', bbox_to_anchor=(0, -0.15),
                    fancybox=False, shadow=False, ncol=4)
         plt.savefig(self.dir + "dofeta.png", dpi=300)
 
