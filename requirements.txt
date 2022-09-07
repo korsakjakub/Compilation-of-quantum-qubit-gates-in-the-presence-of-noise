@@ -3,5 +3,5 @@ scipy~=1.7.3
 setuptools~=56.0.0
 picos~=2.2.9
 tqdm~=4.61.0
-qworder~=0.6
+qworder~=0.7
 matplotlib~=3.5.1
